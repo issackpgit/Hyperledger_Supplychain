@@ -317,15 +317,15 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 
 		//Start- Check that the currentStatus to newStatus transition is accurate
 
-		stateTransitionAllowed := false
+		stateTransitionAllowed := true
 
 		if ProcessStatus == "P/O Created" && newStatus == "P/O Submitted" {
 		stateTransitionAllowed = true
 		} else if ProcessStatus == "P/O Created" && newStatus == "P/O Rejected" {
 		stateTransitionAllowed = true
-        } else if ProcessStatus == "R/R Submitted" && newStatus == "B/C Submitted"{
+        }/* else if ProcessStatus == "R/R Submitted" && newStatus == "B/C Submitted"{
             stateTransitionAllowed = true
-        }
+        }*/
 
 	if stateTransitionAllowed == false {
 		return nil, errors.New("This state transition is not allowed.")
