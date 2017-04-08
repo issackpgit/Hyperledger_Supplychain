@@ -69,7 +69,6 @@ func (t *SMBC) Invoke(stub shim.ChaincodeStubInterface, function string, args []
 		return t.po.UpdatePO(stub, args)
 	} else if function == "submitBC"{
 
-		args := append(args, "SubmitBC")
 		return t.bc.SubmitDoc(stub, args)
 	} 
 
@@ -100,6 +99,7 @@ func (t *SMBC) Query(stub shim.ChaincodeStubInterface, function string, args []s
 
 		return t.cl.GetCargoLocation(stub, args)
     } else if function == "getBC"{
+        
         return t.bc.GetBC(stub,args)
     }
 

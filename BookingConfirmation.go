@@ -136,8 +136,6 @@ func (t *BC) GetBC (stub shim.ChaincodeStubInterface, args []string) ([]byte, er
 		return nil, errors.New("Incorrect number of arguments. Expecting 1.")
 		}
 
-	
-
 
 	ContractNo := args[0]
 
