@@ -9,6 +9,7 @@ import (
 )
 type BC struct {
 
+    po PO
 }
 
 type BCJSON struct {
@@ -126,6 +127,16 @@ func (t *BC) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 	}
 
 	
+    toSend := make ([]string, 2)
+			toSend[0] = string(ContractNo)
+			toSend[1] = "SubmitBC"
+			
+			_,poErr := t.po.UpdatePO(stub, toSend)
+			if poErr != nil {
+				return nil, poErr
+			} 
+    
+    
 	return nil, err
 	}
 

@@ -308,7 +308,12 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 		} else if poStatus == "RejectPO"{
 
 			newStatus = "P/O Rejected"
-		}
+            
+        } else if poStatus == "SubmitBC"{
+            
+            newStatus = "B/C Submitted"
+        }
+        
 
 		//Start- Check that the currentStatus to newStatus transition is accurate
 
@@ -318,7 +323,9 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 		stateTransitionAllowed = true
 		} else if ProcessStatus == "P/O Created" && newStatus == "P/O Rejected" {
 		stateTransitionAllowed = true
-		} 
+        } else if ProcessStatus == "R/R Submitted" && newStatus == "B/C Submitted"{
+            stateTransitionAllowed = true
+        }
 
 	if stateTransitionAllowed == false {
 		return nil, errors.New("This state transition is not allowed.")
@@ -377,7 +384,19 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 			if clErr != nil {
 				return nil, clErr
 			} 
+		} else if poStatus == "SubmitBC"{
+			toSend := make ([]string, 2)
+			toSend[0] = string(ContractNo)
+			toSend[1] = "Exporter Country Forwarder"
+
+			
+			_,clErr := t.cl.UpdateCargoLocation(stub, toSend)
+			if clErr != nil {
+				return nil, clErr
+			} 
 		}
+        
+        
 
 	
 		return nil, nil
