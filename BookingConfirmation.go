@@ -11,6 +11,28 @@ type BC struct {
 
 }
 
+type BCJSON struct {
+
+		
+		ContainerNo 		string `json:"ContainerNo"`
+		PlaceOfDelivery string `json:"PlaceOfDelivery"`
+		NumberOfContainers string `json:"NumberOfContainers"`
+		PlaceOfReceipt string `json:"PlaceOfReceipt"`
+		ExpectedTimeOfDepature string `json:"ExpectedTimeOfDepature"`
+		ExpectedTimeOfArrival string `json:"ExpectedTimeOfArrival"`
+		CutOffDateTime string `json:"CutOffDateTime"`
+		VesselName string `json:"VesselName"`
+		VesselNo 	string `json:"VesselNo"`
+		BookingNo string `json:"BookingNo"`
+		Freight string `json:"Freight"`
+		FreightPayment string `json:"FreightPayment"`
+		UpdateTime	string `json:"UpdateTime"`
+		BCSubmittedTime string `json:"BCSubmittedTime"`
+		
+
+
+}
+
 func (t *BC) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	// Check if table already exists
 	_, err := stub.GetTable("BookingConfirmation")
@@ -97,7 +119,7 @@ func (t *BC) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 			&shim.Column{Value: &shim.Column_String_{String_: UpdateTime}},
 			&shim.Column{Value: &shim.Column_String_{String_: BCSubmittedTime}},
 			
-	})
+        }})
 
 	if !ok && err == nil {
 		return nil, errors.New("Document already exists.")

@@ -67,8 +67,7 @@ func (t *SMBC) Invoke(stub shim.ChaincodeStubInterface, function string, args []
 
 		args := append(args, "RejectPO")
 		return t.po.UpdatePO(stub, args)
-	} 
-    else if function == "submitBC"{
+	} else if function == "submitBC"{
 
 		args := append(args, "SubmitBC")
 		return t.bc.SubmitDoc(stub, args)
