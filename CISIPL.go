@@ -84,14 +84,14 @@ func (t *CISIPL) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]b
 	}
 
 	
-    toSend := make ([]string, 2)
+    /*toSend := make ([]string, 2)
 			toSend[0] = string(ContractNo)
 			toSend[1] = "SubmitCISIPL"
 			
 			_,poErr := t.po.UpdatePO(stub, toSend)
 			if poErr != nil {
 				return nil, poErr
-			} 
+			} */
     
     
 	return nil, err
