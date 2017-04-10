@@ -312,6 +312,9 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
         } else if poStatus == "SubmitBC"{
             
             newStatus = "B/C Submitted"
+        } else if poStatus == "SubmitCISIPL"{
+            
+            newStatus = "C/I,S/I,P/L Submitted"
         }
         
 
@@ -323,7 +326,9 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 		stateTransitionAllowed = true
 		} else if ProcessStatus == "P/O Created" && newStatus == "P/O Rejected" {
 		stateTransitionAllowed = true
-        } else if ProcessStatus == "R/R Submitted" && newStatus == "B/C Submitted"{
+        } else if ProcessStatus == "Request Reserved" && newStatus == "B/C Submitted"{
+            stateTransitionAllowed = true
+        }else if ProcessStatus == "B/C Submitted" && newStatus == "C/I,S/I,P/L Submitted"{
             stateTransitionAllowed = true
         }
 
@@ -387,7 +392,7 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 		} else if poStatus == "SubmitBC"{
 			toSend := make ([]string, 2)
 			toSend[0] = string(ContractNo)
-			toSend[1] = "Exporter Country Forwarder"
+			toSend[1] = "Exporter Country Shipping Firm"
 
 			
 			_,clErr := t.cl.UpdateCargoLocation(stub, toSend)

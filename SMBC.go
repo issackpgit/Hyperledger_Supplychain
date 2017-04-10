@@ -70,6 +70,9 @@ func (t *SMBC) Invoke(stub shim.ChaincodeStubInterface, function string, args []
 	} else if function == "submitBC"{
 
 		return t.bc.SubmitDoc(stub, args)
+	} else if function == "submitCISIPL"{
+
+		return t.cisipl.SubmitDoc(stub, args)
 	} 
 
 return nil, errors.New("Invalid invoke function name.")
@@ -101,6 +104,9 @@ func (t *SMBC) Query(stub shim.ChaincodeStubInterface, function string, args []s
     } else if function == "getBC"{
         
         return t.bc.GetBC(stub,args)
+    }else if function == "getCISIPL"{
+        
+        return t.cisipl.GetCISIPL(stub,args)
     }
 
 return nil, errors.New("Invalid query function name.")
