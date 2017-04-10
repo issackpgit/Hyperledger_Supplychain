@@ -56,7 +56,7 @@ func (t *CISIPL) Init(stub shim.ChaincodeStubInterface, function string, args []
 func (t *CISIPL) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 
 		
-		if len(args) != 15 {
+		if len(args) != 5 {
 			return nil, fmt.Errorf("Incorrect number of arguments. Expecting 5. Got: %d.", len(args))
 		}
 
