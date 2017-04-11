@@ -8,9 +8,10 @@ import (
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 type CISIPL struct {
+	po PO
 
-    po PO
 }
+
 
 type CISIPLJSON struct {
 
@@ -23,6 +24,7 @@ type CISIPLJSON struct {
 
 
 }
+
 
 func (t *CISIPL) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	// Check if table already exists
@@ -52,6 +54,9 @@ func (t *CISIPL) Init(stub shim.ChaincodeStubInterface, function string, args []
 	return nil, nil
 
 	}
+
+
+
 
 func (t *CISIPL) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 
@@ -84,18 +89,21 @@ func (t *CISIPL) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]b
 	}
 
 	
-    /*toSend := make ([]string, 2)
+    		toSend := make ([]string, 2)
 			toSend[0] = string(ContractNo)
 			toSend[1] = "SubmitCISIPL"
 			
 			_,poErr := t.po.UpdatePO(stub, toSend)
 			if poErr != nil {
 				return nil, poErr
-			} */
+			} 
     
     
 	return nil, err
 	}
+
+
+	
 
 func (t *CISIPL) GetCISIPL (stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 
@@ -118,18 +126,24 @@ func (t *CISIPL) GetCISIPL (stub shim.ChaincodeStubInterface, args []string) ([]
 		return nil, fmt.Errorf("Error: Failed retrieving document with ContractNo %s. Error %s", ContractNo, err.Error())
 	}
 
+	var cisiplJSON CISIPLJSON 
+
 	// GetRows returns empty message if key does not exist
 	if len(row.Columns) == 0 {
-		return nil, nil
-	}
+		
+	cisiplJSON.CaseMark = ""
+	cisiplJSON.InvoiceNo = ""
+	cisiplJSON.UpdateTime = ""
+	cisiplJSON.CISIPLSubmittedTime = ""
 
-	var cisiplJSON CISIPLJSON 
+	} else {
 
 	cisiplJSON.CaseMark = row.Columns[2].GetString_()
 	cisiplJSON.InvoiceNo = row.Columns[3].GetString_()
 	cisiplJSON.UpdateTime = row.Columns[4].GetString_()
 	cisiplJSON.CISIPLSubmittedTime = row.Columns[5].GetString_() 
 	
+	}
 	
 
 	jsonCISIPL, err := json.Marshal(cisiplJSON)
@@ -144,6 +158,3 @@ func (t *CISIPL) GetCISIPL (stub shim.ChaincodeStubInterface, args []string) ([]
  	return jsonCISIPL, nil
 
 	}
-
-
-

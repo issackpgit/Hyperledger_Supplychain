@@ -127,7 +127,7 @@ func (t *BC) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 	}
 
 	
-    toSend := make ([]string, 2)
+    		toSend := make ([]string, 2)
 			toSend[0] = string(ContractNo)
 			toSend[1] = "SubmitBC"
 			
@@ -162,12 +162,28 @@ func (t *BC) GetBC (stub shim.ChaincodeStubInterface, args []string) ([]byte, er
 		return nil, fmt.Errorf("Error: Failed retrieving document with ContractNo %s. Error %s", ContractNo, err.Error())
 	}
 
+	var bcJSON BCJSON 
+
 	// GetRows returns empty message if key does not exist
 	if len(row.Columns) == 0 {
-		return nil, nil
-	}
+		
+	bcJSON.ContainerNo = ""
+	bcJSON.PlaceOfDelivery = ""
+	bcJSON.NumberOfContainers = ""
+	bcJSON.PlaceOfReceipt = "" 
+	bcJSON.ExpectedTimeOfDepature = ""
+	bcJSON.ExpectedTimeOfArrival = ""
+	bcJSON.CutOffDateTime = ""
+	bcJSON.VesselName = ""
+	bcJSON.VesselNo = ""
+	bcJSON.BookingNo = ""
+	bcJSON.Freight = ""
+	bcJSON.FreightPayment = ""
+	bcJSON.UpdateTime = ""
+	bcJSON.BCSubmittedTime = ""
+	} else {
 
-	var bcJSON BCJSON 
+	
 
 	bcJSON.ContainerNo = row.Columns[2].GetString_()
 	bcJSON.PlaceOfDelivery = row.Columns[3].GetString_()
@@ -184,7 +200,7 @@ func (t *BC) GetBC (stub shim.ChaincodeStubInterface, args []string) ([]byte, er
 	bcJSON.UpdateTime = row.Columns[14].GetString_()
 	bcJSON.BCSubmittedTime = row.Columns[15].GetString_()
 	
-	
+	}
 
 	jsonBC, err := json.Marshal(bcJSON)
 

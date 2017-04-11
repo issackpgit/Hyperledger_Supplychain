@@ -11,7 +11,10 @@ import (
 )
 type PO struct {
 
+	
 	cl	CL
+
+
 }
 
 
@@ -87,6 +90,10 @@ type POJSON struct {
 		CargoLocation 	string `json:"CargoLocation"`
 
 	}  
+
+
+	
+
 
 func (t *PO) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	// Check if table already exists
@@ -198,7 +205,7 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 			&shim.Column{Value: &shim.Column_String_{String_: TimeOfShipment}},
 			&shim.Column{Value: &shim.Column_String_{String_: PortOfShipment}},
 			&shim.Column{Value: &shim.Column_String_{String_: PortOfDischarge}},
-			&shim.Column{Value: &shim.Column_String_{String_: "P/O Created"}},
+			&shim.Column{Value: &shim.Column_String_{String_: "P/O Submitted"}},
 			&shim.Column{Value: &shim.Column_String_{String_: POInitialCreateTime}},
 			&shim.Column{Value: &shim.Column_String_{String_: UpdateTime}},
 			&shim.Column{Value: &shim.Column_String_{String_: POCreatedTime}},
@@ -217,7 +224,122 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 
 			toSend := make ([]string, 2)
 			toSend[0] = string(ContractNo)
-			toSend[1] = ""
+			toSend[1] = "Exporter"
+			
+			_,clErr := t.cl.UpdateCargoLocation(stub, toSend)
+			if clErr != nil {
+				return nil, clErr
+			} 
+
+	
+	return nil, err
+	}
+
+
+func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+
+		
+		if len(args) != 24 {
+			return nil, fmt.Errorf("Incorrect number of arguments. Expecting 24. Got: %d.", len(args))
+		}
+
+		ContractNo := args[0]
+
+
+// Get the row pertaining to this UID
+		var columns []shim.Column
+		col1 := shim.Column{Value: &shim.Column_String_{String_: "PO"}}
+		columns = append(columns, col1)
+		col2 := shim.Column{Value: &shim.Column_String_{String_: ContractNo}}
+		columns = append(columns, col2)
+
+		row, err := stub.GetRow("PurchaseOrder", columns)
+		if err != nil {
+		return nil, fmt.Errorf("Error: Failed retrieving document with ContractNo %s. Error %s", ContractNo, err.Error())
+		}
+
+		// GetRows returns empty message if key does not exist
+		if len(row.Columns) == 0 {
+		return nil, err
+		}
+
+
+		
+		RefNo := args[1]
+		ExporterName := args[2]
+		ImporterName := args[3]
+		Commodity := args[4]
+		UnitPrice := args[5]
+		Amount := args[6]
+		Currency := args[7]
+		Quantity:= args[8]
+		Weight := args[9]
+		TermsOfTrade := args[10]
+		TermsOfInsurance := args[11]
+		TermsOfPayment := args[12]
+		PackingMethod:= args[13]
+		WayOfTransportation := args[14]
+		TimeOfShipment := args[15]
+		PortOfShipment := args[16]
+		PortOfDischarge := args[17]
+		//ProcessStatus := args[18]
+		POInitialCreateTime := row.Columns[20].GetString_()
+		UpdateTime := args[19]
+		POCreatedTime := args[20]
+		POSubmittedTime := args[21]
+
+
+		CompanyIdOfExporter := args[22]
+		CompanyIdOfImporter := args[23]
+		PORejectReason := ""
+		PaymentDate := args[24]
+
+
+
+
+		ok, err := stub.ReplaceRow("PurchaseOrder", shim.Row{
+		Columns: []*shim.Column{
+			&shim.Column{Value: &shim.Column_String_{String_: "PO"}},
+			&shim.Column{Value: &shim.Column_String_{String_: ContractNo}},
+			&shim.Column{Value: &shim.Column_String_{String_: RefNo}},
+			&shim.Column{Value: &shim.Column_String_{String_: ExporterName}},
+			&shim.Column{Value: &shim.Column_String_{String_: ImporterName}},
+			&shim.Column{Value: &shim.Column_String_{String_: Commodity}},
+			&shim.Column{Value: &shim.Column_String_{String_: UnitPrice}},
+			&shim.Column{Value: &shim.Column_String_{String_: Amount}},
+			&shim.Column{Value: &shim.Column_String_{String_: Currency}},
+			&shim.Column{Value: &shim.Column_String_{String_: Quantity}},
+			&shim.Column{Value: &shim.Column_String_{String_: Weight}},
+			&shim.Column{Value: &shim.Column_String_{String_: TermsOfTrade}},
+			&shim.Column{Value: &shim.Column_String_{String_: TermsOfInsurance}},
+			&shim.Column{Value: &shim.Column_String_{String_: TermsOfPayment}},
+			&shim.Column{Value: &shim.Column_String_{String_: PackingMethod}},
+			&shim.Column{Value: &shim.Column_String_{String_: WayOfTransportation}},
+			&shim.Column{Value: &shim.Column_String_{String_: TimeOfShipment}},
+			&shim.Column{Value: &shim.Column_String_{String_: PortOfShipment}},
+			&shim.Column{Value: &shim.Column_String_{String_: PortOfDischarge}},
+			&shim.Column{Value: &shim.Column_String_{String_: "P/O Submitted"}},
+			&shim.Column{Value: &shim.Column_String_{String_: POInitialCreateTime}},
+			&shim.Column{Value: &shim.Column_String_{String_: UpdateTime}},
+			&shim.Column{Value: &shim.Column_String_{String_: POCreatedTime}},
+			&shim.Column{Value: &shim.Column_String_{String_: POSubmittedTime}},
+			&shim.Column{Value: &shim.Column_String_{String_: CompanyIdOfExporter}},
+			&shim.Column{Value: &shim.Column_String_{String_: CompanyIdOfImporter}},
+			&shim.Column{Value: &shim.Column_String_{String_: PORejectReason}},
+			&shim.Column{Value: &shim.Column_String_{String_: PaymentDate}},
+			
+			
+		}})
+
+	if !ok && err == nil {
+
+		return nil, errors.New("Document unable to Update.")
+	}
+
+
+			toSend := make ([]string, 2)
+			toSend[0] = string(ContractNo)
+			toSend[1] = "Exporter"
 			
 			_,clErr := t.cl.UpdateCargoLocation(stub, toSend)
 			if clErr != nil {
@@ -268,6 +390,8 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 		}
 
 
+
+
 		
 		RefNo := row.Columns[2].GetString_()
 		ExporterName := row.Columns[3].GetString_()
@@ -301,36 +425,96 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 
 		var newStatus string
 
-		if poStatus == "AcceptPO"{
+		/*if poStatus == "AcceptPO"{
 
 			newStatus = "P/O Submitted"
 
-		} else if poStatus == "RejectPO"{
+		} else 
+*/
 
-			newStatus = "P/O Rejected"
+		if poStatus == "RejectPO"{
+
+			newStatus = "P/O Created"
             
         } else if poStatus == "SubmitBC"{
             
             newStatus = "B/C Submitted"
-        } else if poStatus == "SubmitCISIPL"{
+
+        }  else if poStatus == "SubmitSN"{
             
-            newStatus = "C/I,S/I,P/L Submitted"
+            newStatus = "S/N Submitted"
+
+        }  else if poStatus == "ConfirmSN"{
+            
+            newStatus = "S/N Confirmed"
+
+        } else if poStatus == "RejectSN"{
+            
+            newStatus = "P/O Submitted"
+
+        }  else if poStatus == "RRCreated"{
+            
+            newStatus = "Reservation Requested"
+
+        }else if poStatus == "SubmitCISIPL"{
+            
+            newStatus = "C/I S/I P/L Submitted"
+
+        }else if poStatus == "SubmitDR"{
+            
+            newStatus = "D/R Submitted"
+
+        }else if poStatus == "SubmitBL"{
+            
+            newStatus = "B/L Submitted"
+
+        }else if poStatus == "SubmitAN"{
+            
+            newStatus = "A/N Submitted"
+
+        }else if poStatus == "SubmitCRR"{
+            
+            newStatus = "Request FWD"
         }
-        
+
+       
+       
 
 		//Start- Check that the currentStatus to newStatus transition is accurate
 
 		stateTransitionAllowed := false
 
+		/*
 		if ProcessStatus == "P/O Created" && newStatus == "P/O Submitted" {
 		stateTransitionAllowed = true
-		} else if ProcessStatus == "P/O Created" && newStatus == "P/O Rejected" {
+		} else */
+
+
+		if ProcessStatus == "P/O Submitted" && newStatus == "P/O Created" {
 		stateTransitionAllowed = true
-        } else if ProcessStatus == "Request Reserved" && newStatus == "B/C Submitted"{
+        } else if ProcessStatus == "P/O Submitted" && newStatus == "S/N Submitted"{
             stateTransitionAllowed = true
-        }else if ProcessStatus == "B/C Submitted" && newStatus == "C/I,S/I,P/L Submitted"{
+        } else if ProcessStatus == "S/N Submitted" && newStatus == "S/N Confirmed"{
+            stateTransitionAllowed = true
+        } else if ProcessStatus == "S/N Submitted" && newStatus == "P/O Submitted"{
+            stateTransitionAllowed = true
+        } else if ProcessStatus == "S/N Confirmed" && newStatus == "Reservation Requested"{
+            stateTransitionAllowed = true
+        } else if ProcessStatus == "Reservation Requested" && newStatus == "B/C Submitted"{
+            stateTransitionAllowed = true
+        } else if ProcessStatus == "B/C Submitted" && newStatus == "C/I S/I P/L Submitted"{
+            stateTransitionAllowed = true
+        }else if ProcessStatus == "C/I S/I P/L Submitted" && newStatus == "D/R Submitted"{
+            stateTransitionAllowed = true
+        }else if ProcessStatus == "D/R Submitted" && newStatus == "B/L Submitted"{
+            stateTransitionAllowed = true
+        }else if ProcessStatus == "B/L Submitted" && newStatus == "A/N Submitted"{
+            stateTransitionAllowed = true
+        }else if ProcessStatus == "A/N Submitted" && newStatus == "Request FWD"{
             stateTransitionAllowed = true
         }
+
+
 
 	if stateTransitionAllowed == false {
 		return nil, errors.New("This state transition is not allowed.")
@@ -379,31 +563,59 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 
 
 
-		if poStatus == "AcceptPO"{
+
+		if poStatus == "RRCreated"{
 			toSend := make ([]string, 2)
 			toSend[0] = string(ContractNo)
-			toSend[1] = "Exporter"
+			toSend[1] = "Ex FWD"
 
 			
 			_,clErr := t.cl.UpdateCargoLocation(stub, toSend)
 			if clErr != nil {
 				return nil, clErr
 			} 
-		} else if poStatus == "SubmitBC"{
+		}  else if poStatus == "SubmitBC"{
 			toSend := make ([]string, 2)
 			toSend[0] = string(ContractNo)
-			toSend[1] = "Exporter Country Shipping Firm"
+			toSend[1] = "Ex Ship"
 
 			
 			_,clErr := t.cl.UpdateCargoLocation(stub, toSend)
 			if clErr != nil {
 				return nil, clErr
 			} 
-		}
-        
-        
+		} else if poStatus == "SubmitCISIPL"{
+			toSend := make ([]string, 2)
+			toSend[0] = string(ContractNo)
+			toSend[1] = "Shipping"
 
-	
+			
+			_,clErr := t.cl.UpdateCargoLocation(stub, toSend)
+			if clErr != nil {
+				return nil, clErr
+			} 
+		} else if poStatus == "SubmitAN"{
+			toSend := make ([]string, 2)
+			toSend[0] = string(ContractNo)
+			toSend[1] = "Imp Ship"
+
+			
+			_,clErr := t.cl.UpdateCargoLocation(stub, toSend)
+			if clErr != nil {
+				return nil, clErr
+			} 
+		} else if poStatus == "SubmitCRR"{
+			toSend := make ([]string, 2)
+			toSend[0] = string(ContractNo)
+			toSend[1] = "Imp FWD"
+
+			
+			_,clErr := t.cl.UpdateCargoLocation(stub, toSend)
+			if clErr != nil {
+				return nil, clErr
+			} 
+		}    
+        
 		return nil, nil
 }
 
@@ -567,11 +779,7 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 					err = json.Unmarshal(b, &listPO)
 					listPO.ContractNo = contractIDOfUser.ContractNo
 
-					if listPO.ProcessStatus == "P/O Rejected" {
-
-						listPO.ProcessStatus = ""
-					}
-
+					
 					b,_ = t.cl.GetCargoLocation(stub, []string{contractIDOfUser.ContractNo})
 
 					if err != nil {
@@ -648,10 +856,6 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 					err = json.Unmarshal(b, & listPO)
 					listPO.ContractNo = contractIDOfUser.ContractNo
 
-					if listPO.ProcessStatus == "P/O Rejected" {
-
-						listPO.ProcessStatus = ""
-					}
 
 					b,_ = t.cl.GetCargoLocation(stub, []string{contractIDOfUser.ContractNo})
 				
@@ -703,11 +907,6 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 					err = json.Unmarshal(b, &listPO)
 					listPO.ContractNo = contractIDOfUser.ContractNo
 
-
-					if listPO.ProcessStatus == "P/O Rejected" {
-
-						listPO.ProcessStatus = ""
-					}
 
 
 					b,_ = t.cl.GetCargoLocation(stub, []string{contractIDOfUser.ContractNo})
@@ -794,3 +993,5 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 		return json.Marshal(listOfContracts.contractNo)
 
 	}
+
+
