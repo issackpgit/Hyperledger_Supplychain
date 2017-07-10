@@ -16,7 +16,7 @@ type CRRJSON struct {
 
 ImpCtryForwardingCompany  string `json:"ImpCtryForwardingCompany"`
 UpdateTime string `json:"UpdateTime"`
-CargoRecievedTime string `json:"CargoRecievedTime"`
+ImpCtryForwardingTime string `json:"ImpCtryForwardingTime"`
 CompanyIdOfImpCtryForwardingCompany string `json:"CompanyIdOfImpCtryForwardingCompany"`
 
 }
@@ -36,7 +36,7 @@ func (t *CRR) Init(stub shim.ChaincodeStubInterface, function string, args []str
 		&shim.ColumnDefinition{Name: "ContractNo", Type: shim.ColumnDefinition_STRING, Key: true},
 		&shim.ColumnDefinition{Name: "ImpCtryForwardingCompany", Type: shim.ColumnDefinition_STRING, Key: false},
 		&shim.ColumnDefinition{Name: "UpdateTime", Type: shim.ColumnDefinition_STRING, Key: false},
-		&shim.ColumnDefinition{Name: "CargoRecievedTime", Type: shim.ColumnDefinition_STRING, Key: false},
+		&shim.ColumnDefinition{Name: "ImpCtryForwardingTime", Type: shim.ColumnDefinition_STRING, Key: false},
 		&shim.ColumnDefinition{Name: "CompanyIdOfImpCtryForwardingCompany", Type: shim.ColumnDefinition_STRING, Key: false},
 		
 	})
@@ -60,7 +60,7 @@ func (t *CRR) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte
 		ContractNo := args[0]
 		ImpCtryForwardingCompany := args[1]
 		UpdateTime := args[2]
-		CargoRecievedTime := args[3]
+		ImpCtryForwardingTime := args[3]
 		CompanyIdOfImpCtryForwardingCompany := args[4]
 		
 		
@@ -72,7 +72,7 @@ func (t *CRR) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte
 			&shim.Column{Value: &shim.Column_String_{String_: ContractNo}},
 			&shim.Column{Value: &shim.Column_String_{String_: ImpCtryForwardingCompany}},
 			&shim.Column{Value: &shim.Column_String_{String_: UpdateTime}},
-			&shim.Column{Value: &shim.Column_String_{String_: CargoRecievedTime}},
+			&shim.Column{Value: &shim.Column_String_{String_: ImpCtryForwardingTime}},
 			&shim.Column{Value: &shim.Column_String_{String_: CompanyIdOfImpCtryForwardingCompany}}},
 		
 
@@ -128,16 +128,16 @@ func (t *CRR) GetCRR (stub shim.ChaincodeStubInterface, args []string) ([]byte, 
 		
 	crrJSON.ImpCtryForwardingCompany = ""
 	crrJSON.UpdateTime = ""
-	crrJSON.CargoRecievedTime = ""
-	crrJSON.CargoRecievedTime = ""
+	crrJSON.ImpCtryForwardingTime = ""
+	crrJSON.CompanyIdOfImpCtryForwardingCompany = ""
 
 
 	} else {
 
 	crrJSON.ImpCtryForwardingCompany = row.Columns[2].GetString_()
 	crrJSON.UpdateTime = row.Columns[3].GetString_()
-	crrJSON.CargoRecievedTime = row.Columns[4].GetString_()
-	crrJSON.CargoRecievedTime = row.Columns[5].GetString_()
+	crrJSON.ImpCtryForwardingTime = row.Columns[4].GetString_()
+	crrJSON.CompanyIdOfImpCtryForwardingCompany = row.Columns[5].GetString_()
 	
 	}
 	

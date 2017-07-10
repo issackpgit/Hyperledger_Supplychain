@@ -38,6 +38,8 @@ type SNJSON struct {
 		PortOfDischarge string `json:"PortOfDischarge"`
 		SNRejectReason string `json:"SNRejectReason"`
 		PaymentDate string `json:"PaymentDate"`
+		SNSubmittedTime string `json:"SNSubmittedTime"`
+		SNConfirmedTime string `json:"SNConfirmedTime"`
 
 }
 	
@@ -100,10 +102,27 @@ func (t *SN) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 	})
 
 	if !ok && err == nil {
-		return nil, errors.New("Document already exists.")
+
+		ok, err := stub.ReplaceRow("SalesNote", shim.Row{
+		Columns: []*shim.Column{
+			&shim.Column{Value: &shim.Column_String_{String_: "SN"}},
+			&shim.Column{Value: &shim.Column_String_{String_: ContractNo}},
+			&shim.Column{Value: &shim.Column_String_{String_: UpdateTime}},
+			&shim.Column{Value: &shim.Column_String_{String_: SNSubmittedTime}},
+			&shim.Column{Value: &shim.Column_String_{String_: SNConfirmedTime}},
+			&shim.Column{Value: &shim.Column_String_{String_: SNRejectReason}},
+			
+			
+		}})
+
+	if !ok && err == nil {
+
+		return nil, errors.New("Document unable to Update.")
+	} 
+		 
 	}
 
-	toSend := make ([]string, 2)
+		toSend := make ([]string, 2)
 		toSend[0] = string(ContractNo)
 		toSend[1] = "SubmitSN"
 			
@@ -256,15 +275,21 @@ func (t *SN) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 	var snJSON SNJSON 
 	var poJSON POJSON
 	var RReason string
+	var SubmitTime string
+	var ConfirmTime string
 
 	// GetRows returns empty message if key does not exist
 	if len(row.Columns) == 0 {
 
 		RReason = ""
+		SubmitTime = ""
+		ConfirmTime = ""
 
 	} else {
 
 		RReason = row.Columns[5].GetString_()
+		SubmitTime = row.Columns[3].GetString_()
+		ConfirmTime = row.Columns[4].GetString_()
 
 
 	}
@@ -304,7 +329,8 @@ func (t *SN) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 	snJSON.PortOfDischarge = poJSON.PortOfDischarge
 	snJSON.SNRejectReason = RReason
 	snJSON.PaymentDate = poJSON.PaymentDate
-	
+	snJSON.SNSubmittedTime = SubmitTime
+	snJSON.SNConfirmedTime = ConfirmTime
 
 
 	jsonSN, err := json.Marshal(snJSON)

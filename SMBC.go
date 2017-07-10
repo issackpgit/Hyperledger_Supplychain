@@ -23,6 +23,10 @@ type SMBC struct {
 	crr 	CRR 
 	cisipl 	CISIPL
 	dr 		DR
+	epo  	EPO
+	crt  	CRT
+    iot     IOT
+    drr     DRR
 }
 
 type DetailContractJSON struct{
@@ -36,8 +40,6 @@ type DetailContractJSON struct{
 		ImpCtryShippingFirm	string  `json:"ImpCtryShippingFirm"`
 		ProcessStatus  string  `json:"ProcessStatus"`
 		CargoLocation string `json:"CargoLocation"`
-
-
 		Commodity	string  `json:"Commodity"`
 		UnitPrice	string `json:"UnitPrice"` 
 		Amount	  string  `json:"Amount"`
@@ -45,16 +47,13 @@ type DetailContractJSON struct{
 		Quantity	string `json:"Quantity"`
 		Weight		string `json:"Weight"`
 		DateCargoReceived	string `json:"DateCargoReceived"`
-
 		TermsOfPayment  string `json:"TermsOfPayment"` 
 		TermsOfTrade string `json:"TermsOfTrade"` 
 		TermsOfInsurance  string `json:"TermsOfInsurance"` 
-
 		ContainerNo string `json:"ContainerNo"` 
 		PlaceOfDelivery  string `json:"PlaceOfDelivery"` 
 		NumberOfContainers  string `json:"NumberOfContainers"` 
 		PackingMethod  string `json:"PackingMethod"` 
-
 		WayOfTransportation string `json:"WayOfTransportation"` 
 		TimeOfShipment  string `json:"TimeOfShipment"` 
 		PortOfShipment   string `json:"PortOfShipment"` 
@@ -70,10 +69,35 @@ type DetailContractJSON struct{
 		Freight  string `json:"Freight"` 
 		FreightPayment  string `json:"FreightPayment"`
 		CaseMark   string `json:"CaseMark"` 
-
 		InvoiceNo  string `json:"InvoiceNo"` 
+		CISIPLUpdateTime string `json:"CISIPLUpdateTime"`
+		CISIPLSubmittedTime string `json:"CISIPLSubmittedTime"`
 		UnknownClause string `json:"UnknownClause"` 
 		BLNo  string  `json:"BLNo"` 
+		POSubmittedTime string  `json:"POSubmittedTime"`
+
+		SNSubmittedTime string `json:"SNSubmittedTime"`
+		SNConfirmedTime string `json:"SNConfirmedTime"`
+		ReservationRequestedTime string `json:"ReservationRequestedTime"`
+		BCSubmittedTime string `json:"BCSubmittedTime"`
+		
+		DRSubmittedTime string  `json:"DRSubmittedTime"`
+		BLSubmittedTime string `json: "BLSubmittedTime"`
+		ANSubmittedTime string  `json:"ANSubmittedTime"`
+		ImpCtryForwardingTime string `json:"ImpCtryForwardingTime"`
+		ImporterShippingTime string `json:"ImporterShippingTime"`
+		ImporterReceivedTime string `json:"ImporterReceivedTime"`
+
+
+
+		ExpCargoLocationTime string `json:"ExpCargoLocationTime"`
+		ExForwarderCargoLocationTime string `json:"ExForwarderCargoLocationTime"`
+		ExShippingFirmLocationTime string `json:"ExShippingFirmLocationTime"`
+		ShippingCargoLocationTime string `json:"ShippingCargoLocationTime"`
+		ImShipCargoLocationTime  string `json:"ImShipCargoLocationTime"`
+		ImForwarderCargoLocationTime string `json:"ImForwarderCargoLocationTime"`
+		CargoReceivedLocationTime string `json:"CargoReceivedLocationTime"`
+
 
 	}
 
@@ -90,14 +114,13 @@ func (t *SMBC) Init(stub shim.ChaincodeStubInterface, function string, args []st
 	t.crr.Init(stub, function, args)
 	t.cisipl.Init(stub, function, args)
 	t.dr.Init(stub, function, args)
-
-
-	
+	t.epo.Init(stub, function, args)
+	t.crt.Init(stub, function, args)
+    t.iot.Init(stub, function, args)
+    t.drr.Init(stub, function, args)
 
 	return nil, nil
 }
-
-
 
 
 
@@ -107,17 +130,6 @@ func (t *SMBC) Invoke(stub shim.ChaincodeStubInterface, function string, args []
 	if function == "submitPO" {
 		
 		return t.po.SubmitDoc(stub, args)
-
-	  
-
-	/*else if function == "acceptPO"{
-
-
-		args := append(args, "AcceptPO")
-		return t.po.UpdatePO(stub,args)
-
-
-	} */
 
 	} else if function == "rejectPO"{
 
@@ -146,10 +158,7 @@ func (t *SMBC) Invoke(stub shim.ChaincodeStubInterface, function string, args []
 
 		return t.rr.SubmitDoc(stub, args)
 
-	} else if function == "submitRR"{
-
-		return t.rr.SubmitDoc(stub, args)
-	} else if function == "submitDR"{
+	}  else if function == "submitDR"{
 
 		return t.dr.SubmitDoc(stub, args)
 	} else if function == "submitBL"{
@@ -166,17 +175,58 @@ func (t *SMBC) Invoke(stub shim.ChaincodeStubInterface, function string, args []
 
 		return t.po.ReSubmitDoc(stub, args)
 		
-	} else if function == "updateCargoLocation"{
+	} else if function == "submitCISIPL"{
 
-		return t.cl.UpdateCargoLocation(stub, args)
+		return t.cisipl.SubmitDoc(stub, args)
+
+	}  else if function == "processChange"{
+
+		return t.po.ProcessChange(stub, args)
+
+	} else if function == "initEarlyPaymentOffer"{
+
+		return t.epo.InitEarlyPaymentOffer(stub, args)
+
+	} else if function == "submitEarlyPaymentOffer"{
+
+		return t.epo.SubmitEarlyPaymentOffer(stub, args)
+
+	} else if function == "acceptEarlyPaymentOffer"{
+
+		args := append(args, "Accepted")
+
+
+			toSend := make ([]string, 1)
+			toSend[0] = args[0]
+			
+			_,err := t.UpdatePO(stub, toSend)
+			if err != nil {
+				return nil, err
+			}
+
+		return t.epo.UpdateEarlyPaymentOffer(stub, args)
+
+	} else if function == "rejectEarlyPaymentOffer"{
+
+		args := append(args, "NoOffer")
+		return t.epo.UpdateEarlyPaymentOffer(stub, args)
+        
+	} else if function == "submitIOTdata"{
+
+		return t.iot.SubmitDoc(stub, args)
+        
+	} else if function == "deviceRegister"{
+
+		return t.drr.SubmitDoc(stub, args)
+        
+	}  else if function == "deviceReRegister"{
+
+		return t.drr.ReSubmitDoc(stub, args)
 	} 
-
-
 	
 
 return nil, errors.New("Invalid invoke function name.")
 }
-
 
 
 
@@ -235,7 +285,41 @@ func (t *SMBC) Query(stub shim.ChaincodeStubInterface, function string, args []s
 
     	return t.po.ListOfContracts(stub,args)
 
-    }
+    }else if function == "getCISIPL"{
+        
+        return t.cisipl.GetCISIPL(stub,args)
+
+    } else if function == "getEPO"{
+
+    	return t.epo.GetEPO(stub,args)
+    	
+    } else if function == "getCL"{
+
+    	return t.cl.GetCL(stub,args)
+
+    }  else if function == "getContractReceivedList"{
+
+    	return t.po.GetContractReceivedList(stub,args)
+
+    } else if function == "getCargoLocationChangeList"{
+
+    	return t.po.GetCargoLocationChangeList(stub,args)
+
+    } else if function == "getIOTdata"{
+
+    	return t.iot.GetIOTdata(stub,args)
+
+    } else if function == "getdrrdata"{
+
+    	return t.drr.Getdrrdata(stub,args)
+
+    } else if function == "getContractNo"{
+
+    	return t.drr.GetContractNo(stub,args)
+
+    }  
+
+
 
 return nil, errors.New("Invalid query function name.")
 }
@@ -248,7 +332,6 @@ func main() {
 		fmt.Printf("Error starting SMBC: %s", err)
 	}
 }
-
 
 
 func (t *SMBC) DetailContractByContractID(stub shim.ChaincodeStubInterface, args []string) ([]byte, error){
@@ -267,6 +350,9 @@ func (t *SMBC) DetailContractByContractID(stub shim.ChaincodeStubInterface, args
 		var crrJSON CRRJSON
 		var anJSON  ANJSON
 		var blJSON BLJSON
+		var drJSON DRJSON
+		var clJSON CLJSON
+		var crtJSON CRTJSON
 
 		var CLocation string
 
@@ -330,6 +416,11 @@ func (t *SMBC) DetailContractByContractID(stub shim.ChaincodeStubInterface, args
 
 		 b, err = t.cl.GetCargoLocation (stub, args)
 
+		 if err != nil {
+
+		 	return nil, fmt.Errorf("Unable to retrieve CL status: %s.", err.Error())
+		 }
+
 		 CLocation = string(b)
 
 		 if err != nil{
@@ -338,6 +429,32 @@ func (t *SMBC) DetailContractByContractID(stub shim.ChaincodeStubInterface, args
 		 }
 
 
+		b, err = t.dr.GetDR(stub, args)
+
+		 err = json.Unmarshal(b, &drJSON)
+
+		 if err != nil{
+
+		 	return nil, fmt.Errorf("Unable to retrieve DR data: %s.", err.Error())
+		 }
+
+		 b, err = t.cl.GetCL(stub, args)
+
+		 err = json.Unmarshal(b, &clJSON)
+
+		 if err != nil{
+
+		 	return nil, fmt.Errorf("Unable to retrieve CL data: %s.", err.Error())
+		 }
+
+		 b, err = t.crt.GetCRT(stub, args)
+
+		 err = json.Unmarshal(b, &crtJSON)
+
+		 if err != nil{
+
+		 	return nil, fmt.Errorf("Unable to retrieve CRT data: %s.", err.Error())
+		 }
 
 		
 		detailContractJSON.RefNo  = poJSON.RefNo
@@ -349,7 +466,6 @@ func (t *SMBC) DetailContractByContractID(stub shim.ChaincodeStubInterface, args
 		detailContractJSON.ImpCtryShippingFirm	= rrJSON.ImpCtryShippingFirm
 		detailContractJSON.ProcessStatus  = poJSON.ProcessStatus
 		detailContractJSON.CargoLocation  = CLocation
-
 		detailContractJSON.Commodity	 = poJSON.Commodity
 		detailContractJSON.UnitPrice	 = poJSON.UnitPrice
 		detailContractJSON.Amount	  = poJSON.Amount	
@@ -357,16 +473,13 @@ func (t *SMBC) DetailContractByContractID(stub shim.ChaincodeStubInterface, args
 		detailContractJSON.Quantity	 = poJSON.Quantity	 
 		detailContractJSON.Weight	 = poJSON.Weight
 		detailContractJSON.DateCargoReceived = blJSON.DateCargoReceived
-
 		detailContractJSON.TermsOfPayment   = poJSON.TermsOfPayment
 		detailContractJSON.TermsOfTrade  = poJSON.TermsOfTrade 
 		detailContractJSON.TermsOfInsurance   = poJSON.TermsOfInsurance
-
 		detailContractJSON.ContainerNo = bcJSON.ContainerNo
 		detailContractJSON.PlaceOfDelivery  = bcJSON.PlaceOfDelivery  
 		detailContractJSON.NumberOfContainers  = bcJSON.NumberOfContainers 
 		detailContractJSON.PackingMethod  = poJSON.PackingMethod
-
 		detailContractJSON.WayOfTransportation  = poJSON.WayOfTransportation 
 		detailContractJSON.TimeOfShipment   = poJSON.TimeOfShipment 
 		detailContractJSON.PortOfShipment    = poJSON.PortOfShipment
@@ -382,10 +495,34 @@ func (t *SMBC) DetailContractByContractID(stub shim.ChaincodeStubInterface, args
 		detailContractJSON.Freight  = bcJSON.Freight  
 		detailContractJSON.FreightPayment  = bcJSON.FreightPayment 
 		detailContractJSON.CaseMark  = cisiplJSON.CaseMark
-
 		detailContractJSON.InvoiceNo = cisiplJSON.InvoiceNo 
+		detailContractJSON.CISIPLUpdateTime = cisiplJSON.UpdateTime
+		detailContractJSON.CISIPLSubmittedTime =cisiplJSON.CISIPLSubmittedTime
 		detailContractJSON.UnknownClause = blJSON.UnknownClause 
 		detailContractJSON.BLNo  = blJSON.BLNo
+		detailContractJSON.POSubmittedTime = poJSON.POSubmittedTime
+		detailContractJSON.SNSubmittedTime = snJSON.SNSubmittedTime
+		detailContractJSON.SNConfirmedTime = snJSON.SNConfirmedTime
+		detailContractJSON.ReservationRequestedTime = rrJSON.ReservationRequestedTime
+		detailContractJSON.BCSubmittedTime = bcJSON.BCSubmittedTime
+		
+		detailContractJSON.DRSubmittedTime = drJSON.DRSubmittedTime
+		detailContractJSON.BLSubmittedTime = blJSON.BLSubmittedTime
+		detailContractJSON.ANSubmittedTime = anJSON.ANSubmittedTime
+		detailContractJSON.ImpCtryForwardingTime = crrJSON.ImpCtryForwardingTime
+		detailContractJSON.ImporterShippingTime = crtJSON.ImporterShippingTime 
+		detailContractJSON.ImporterReceivedTime = crtJSON.ImporterReceivedTime 
+
+
+		detailContractJSON.ExpCargoLocationTime = clJSON.ExpCargoLocationTime
+		detailContractJSON.ExForwarderCargoLocationTime = clJSON.ExForwarderCargoLocationTime
+		detailContractJSON.ExShippingFirmLocationTime = clJSON.ExShippingFirmLocationTime
+		detailContractJSON.ShippingCargoLocationTime = clJSON.ShippingCargoLocationTime
+		detailContractJSON.ImShipCargoLocationTime = clJSON.ImShipCargoLocationTime
+		detailContractJSON.ImForwarderCargoLocationTime = clJSON.ImForwarderCargoLocationTime
+		detailContractJSON.CargoReceivedLocationTime = clJSON.CargoReceivedLocationTime
+
+
 
 
 		jsonDetailOfContract, err := json.Marshal(detailContractJSON)
@@ -402,3 +539,36 @@ func (t *SMBC) DetailContractByContractID(stub shim.ChaincodeStubInterface, args
 
 
 }
+
+
+func (t *SMBC) UpdatePO(stub shim.ChaincodeStubInterface, args []string) ([]byte, error){
+		if len(args) != 1 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 1.")
+		}
+
+		var epoJSON EPOJSON
+
+		b, err := t.epo.GetEPO(stub, args)
+
+		err = json.Unmarshal(b, &epoJSON)
+
+		 if err != nil{
+
+		 	return nil, fmt.Errorf("Unable to retrieve EPO data: %s.", err.Error())
+		 }
+
+
+		 TotalAmount := epoJSON.TotalAmount
+		
+		 args = append (args, TotalAmount)
+
+		 _, err = t.po.UpdatePOAmount(stub,args)
+
+		 if err != nil {
+
+		 	return nil, err
+		 }
+
+		return nil, err 
+
+	}

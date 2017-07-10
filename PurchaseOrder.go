@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"encoding/json"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
+	"strconv"
+
 	
 
 )
@@ -13,6 +15,8 @@ type PO struct {
 
 	
 	cl	CL
+	epo EPO
+	crt CRT
 
 
 }
@@ -70,6 +74,7 @@ type POJSON struct {
 		Commodity string `json:"Commodity"`
 		ProcessStatus   string `json:"ProcessStatus"`
 		CargoLocation string `json:"CargoLocation"`	
+		OfferStatus string `json:"OfferStatus"`   
 		
 			}
 
@@ -149,11 +154,47 @@ func (t *PO) Init(stub shim.ChaincodeStubInterface, function string, args []stri
 func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 
 		
+
 		if len(args) != 25 {
 			return nil, fmt.Errorf("Incorrect number of arguments. Expecting 25. Got: %d.", len(args))
 		}
 
-		ContractNo := args[0]
+		//Generate new ContractID
+		toSend := make ([]string, 0)
+		numbContract, err := t.NumbContracts(stub,toSend)
+		if err != nil {
+			return nil, err
+		} 
+
+		var count count
+		err = json.Unmarshal(numbContract, &count)
+		if err != nil{
+			return nil, err
+		}
+
+		NewContractNumb := count.NumContracts + 1
+		var str1 string
+		
+		if NewContractNumb  < 10 {
+			str1 =  "CN0000" + strconv.Itoa(NewContractNumb) 
+		} else if NewContractNumb < 100 {
+			str1 =  "CN000" + strconv.Itoa(NewContractNumb) 
+		} else if NewContractNumb < 1000 {
+			str1 =  "CN00" + strconv.Itoa(NewContractNumb) 
+		} else if NewContractNumb < 10000 {
+			str1 =  "CN0" + strconv.Itoa(NewContractNumb) 
+		} else if NewContractNumb < 100000 {
+			str1 =  "CN" + strconv.Itoa(NewContractNumb) 
+		} else {
+			return nil, errors.New("Contract number count exceeded the limit.")
+		}
+
+		var contractNum ContractNo 
+		contractNum.ContractNo = str1
+
+		//End of ContractID generation
+
+		ContractNo := str1
 		RefNo := args[1]
 		ExporterName := args[2]
 		ImporterName := args[3]
@@ -221,19 +262,96 @@ func (t *PO) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 		return nil, errors.New("Document already exists.")
 	}
 
+			
 
-			toSend := make ([]string, 2)
+			toSend = make ([]string, 3)
 			toSend[0] = string(ContractNo)
 			toSend[1] = "Exporter"
+			toSend[2] = POCreatedTime
+
 			
 			_,clErr := t.cl.UpdateCargoLocation(stub, toSend)
 			if clErr != nil {
+				
 				return nil, clErr
-			} 
+			}
 
-	
-	return nil, err
+
+			
+
+			//Insert data in EPO table
+
+			Cont := make ([]string, 1)
+			Cont[0] = string(ContractNo)
+
+			_, Cerr := t.epo.SubmitDoc(stub, Cont) 
+
+			if Cerr != nil {
+				return nil, Cerr
+			}
+
+			_, CrtErr := t.crt.SubmitDoc(stub, Cont) 
+
+			if CrtErr != nil {
+				return nil, CrtErr
+			}
+
+			//return Contractnumber 
+			jsonNewContract, err := json.Marshal(contractNum)
+
+			if err != nil {
+				return nil, err
+			}
+
+			fmt.Println(jsonNewContract)
+
+ 			return jsonNewContract, nil
+			//return nil, err
+		
 	}
+
+
+func (t *PO) ProcessChange(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+
+		
+		if len(args) != 3 {
+			return nil, fmt.Errorf("Incorrect number of arguments. Expecting 3. Got: %d.", len(args))
+		}
+
+		ContractNo := args[0]
+		Status := args[1]
+		Time := args[2]
+		
+
+		SChange := make ([]string, 2)
+		SChange[0] = string(ContractNo)
+		SChange[1] = Status
+
+		_, err := t.UpdatePO(stub,SChange)
+
+		if err != nil {
+			return nil, err
+		}
+
+		CRTChange := make ([]string, 3)
+		CRTChange[0] = string(ContractNo)
+		CRTChange[1] = Status
+		CRTChange[2] = Time
+
+		
+		_, err = t.crt.UpdateDoc(stub,CRTChange)
+
+		if err != nil {
+			return nil, err
+		}
+
+
+ 		return nil, err
+
+	}
+
+
+
 
 
 func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
@@ -263,7 +381,8 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 		return nil, err
 		}
 
-
+		
+		
 		
 		RefNo := args[1]
 		ExporterName := args[2]
@@ -282,17 +401,14 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 		TimeOfShipment := args[15]
 		PortOfShipment := args[16]
 		PortOfDischarge := args[17]
-		//ProcessStatus := args[18]
 		POInitialCreateTime := row.Columns[20].GetString_()
-		UpdateTime := args[19]
-		POCreatedTime := args[20]
-		POSubmittedTime := args[21]
-
-
-		CompanyIdOfExporter := args[22]
-		CompanyIdOfImporter := args[23]
+		UpdateTime := args[18]
+		POCreatedTime := args[19]
+		POSubmittedTime := args[20]
+		CompanyIdOfExporter := args[21]
+		CompanyIdOfImporter := args[22]
 		PORejectReason := ""
-		PaymentDate := args[24]
+		PaymentDate := args[23]
 
 
 
@@ -336,16 +452,6 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 		return nil, errors.New("Document unable to Update.")
 	}
 
-
-			toSend := make ([]string, 2)
-			toSend[0] = string(ContractNo)
-			toSend[1] = "Exporter"
-			
-			_,clErr := t.cl.UpdateCargoLocation(stub, toSend)
-			if clErr != nil {
-				return nil, clErr
-			} 
-
 	
 	return nil, err
 	}
@@ -388,8 +494,6 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 		if len(row.Columns) == 0 {
 		return nil, err
 		}
-
-
 
 
 		
@@ -475,6 +579,14 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
         }else if poStatus == "SubmitCRR"{
             
             newStatus = "Request FWD"
+
+        } else if poStatus == "NotifyImShip"{
+            
+            newStatus = "Notify to Im Ship"
+
+        } else if poStatus == "CargoReceived"{
+            
+            newStatus = "Cargo Received"
         }
 
        
@@ -511,6 +623,10 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
         }else if ProcessStatus == "B/L Submitted" && newStatus == "A/N Submitted"{
             stateTransitionAllowed = true
         }else if ProcessStatus == "A/N Submitted" && newStatus == "Request FWD"{
+            stateTransitionAllowed = true
+        }else if ProcessStatus == "Request FWD" && newStatus == "Notify to Im Ship"{
+            stateTransitionAllowed = true
+        }else if ProcessStatus == "Notify to Im Ship" && newStatus == "Cargo Received"{
             stateTransitionAllowed = true
         }
 
@@ -563,6 +679,7 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 
 
 
+		/*
 
 		if poStatus == "RRCreated"{
 			toSend := make ([]string, 2)
@@ -614,7 +731,20 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 			if clErr != nil {
 				return nil, clErr
 			} 
-		}    
+		}  else if poStatus == "CargoReceived"{
+			toSend := make ([]string, 2)
+			toSend[0] = string(ContractNo)
+			toSend[1] = "Importer"
+
+			
+			_,clErr := t.cl.UpdateCargoLocation(stub, toSend)
+			if clErr != nil {
+				return nil, clErr
+			} 
+
+			
+		}  */
+
         
 		return nil, nil
 }
@@ -711,7 +841,7 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 
 
 
-	func (t *PO) ListContractsByCompID(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+func (t *PO) ListContractsByCompID(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 
 		if len(args) != 2 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 2.")
@@ -756,16 +886,46 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 						break 
 					
 					} else if roleID == "1" {
-						if row.Columns[24].GetString_() == companyID{
+						if row.Columns[24].GetString_() == companyID && row.Columns[19].GetString_() != "P/O Created"{
+
+						CToSend := make ([]string, 1)
+						CToSend[0] = row.Columns[1].GetString_()
+
+						
+						//get PO Table Contract status and if status is Cargo Received don't show that Contract to Exporter
+						b, err := t.GetContractStatus(stub, CToSend)
+
+						if err != nil {
+							return nil, err
+						}
+
+						if string(b) != "Cargo Received"{
 
 					 		contractIDOfUser.ContractNo = row.Columns[1].GetString_()
+					 	}
 
 						}
+
 					} else if roleID == "4"{
 
-						if row.Columns[25].GetString_() == companyID{
+						if row.Columns[25].GetString_() == companyID {
+
+						CToSend := make ([]string, 1)
+						CToSend[0] = row.Columns[1].GetString_()
+
+						
+						//get PO Table Contract status and if status is Cargo Received don't show that Contract to Importer
+						b, err := t.GetContractStatus(stub, CToSend)
+
+						if err != nil {
+							return nil, err
+						}
+
+						if string(b) != "Cargo Received"{
 
 					 	contractIDOfUser.ContractNo = row.Columns[1].GetString_()
+
+					 	}
 
 						}
 
@@ -786,6 +946,22 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
         				return nil, err
         			}
 					listPO.CargoLocation = string(b)
+
+
+					var OfferStatusJSON EPOJSON
+					b,_ = t.epo.GetEPO(stub, []string{contractIDOfUser.ContractNo})
+					if err != nil {
+        				return nil, err
+        			}
+
+        			err = json.Unmarshal(b, &OfferStatusJSON)
+
+        			if err != nil{
+						return nil, err
+        			}
+
+        			listPO.OfferStatus = OfferStatusJSON.OfferStatus
+
 					listContracts.poDetail = append(listContracts.poDetail, listPO)
 
 					}
@@ -823,25 +999,68 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 					} else if roleID == "2" {
 						if row.Columns[7].GetString_() == companyID{
 
+						CToSend := make ([]string, 1)
+						CToSend[0] = row.Columns[1].GetString_()
+
+						
+						//get PO Table Contract status and if status is Cargo Received don't show that Contract to Exp Cnt For
+						b, err := t.GetContractStatus(stub, CToSend)
+
+						if err != nil {
+							return nil, err
+						}
+
+							if string(b) != "Cargo Received"{
+
 					 		contractIDOfUser.ContractNo = row.Columns[1].GetString_()
 
-					 		
+					 		}
 						}
 					} else if roleID == "3" {
 
 
 						if row.Columns[8].GetString_() == companyID{
 
-					 	contractIDOfUser.ContractNo = row.Columns[1].GetString_()
+						CToSend := make ([]string, 1)
+						CToSend[0] = row.Columns[1].GetString_()
 
+						
+						//get PO Table Contract status and if status is Cargo Received don't show that Contract to Exp cty Shi
+						b, err := t.GetContractStatus(stub, CToSend)
+
+						if err != nil {
+							return nil, err
+						}
+
+							if string(b) != "Cargo Received"{
+
+					 			contractIDOfUser.ContractNo = row.Columns[1].GetString_()
+					 		}
 					 	
 						}
 
 					} else if roleID == "6"{
 
+
+
 						if row.Columns[4].GetString_() == companyID{
 
+						CToSend := make ([]string, 1)
+						CToSend[0] = row.Columns[1].GetString_()
+
+						
+						//get PO Table Contract status and if status is Reservation Requested and Cargo Received don't show that Contract to Imp.Fwd
+						b, err := t.GetContractStatus(stub, CToSend)
+
+						if err != nil {
+							return nil, err
+						}
+
+						if string(b) != "Reservation Requested" && string(b) != "Cargo Received" {
+
 					 	contractIDOfUser.ContractNo = row.Columns[1].GetString_()
+
+					 	}
 
 					 	
 						}
@@ -861,6 +1080,19 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 				
 					listPO.CargoLocation = string(b)
 
+					var OfferStatusJSON EPOJSON
+					b,_ = t.epo.GetEPO(stub, []string{contractIDOfUser.ContractNo})
+					if err != nil {
+        				return nil, err
+        			}
+
+        			err = json.Unmarshal(b, &OfferStatusJSON)
+
+        			if err != nil{
+						return nil, err
+        			}
+
+        			listPO.OfferStatus = OfferStatusJSON.OfferStatus
 					listContracts.poDetail = append(listContracts.poDetail, listPO)
 
 				}
@@ -895,8 +1127,22 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 					} else if roleID == "5" {
 						if row.Columns[5].GetString_() == companyID{
 
+						CToSend := make ([]string, 1)
+						CToSend[0] = row.Columns[1].GetString_()
+
+						
+						//get PO Table Contract status and if status is Cargo Received don't show that Contract to Imp Cty Frw
+						b, err := t.GetContractStatus(stub, CToSend)
+
+						if err != nil {
+							return nil, err
+						}
+
+							if string(b) != "Cargo Received"{
+
 					 		contractIDOfUser.ContractNo = row.Columns[1].GetString_()
 
+					 	}
 					 		
 						}
 					}  
@@ -913,6 +1159,20 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 
 					listPO.CargoLocation = string(b)
 
+					var OfferStatusJSON EPOJSON
+					b,_ = t.epo.GetEPO(stub, []string{contractIDOfUser.ContractNo})
+					if err != nil {
+        				return nil, err
+        			}
+
+        			err = json.Unmarshal(b, &OfferStatusJSON)
+
+        			if err != nil{
+						return nil, err
+        			}
+
+        			listPO.OfferStatus = OfferStatusJSON.OfferStatus
+
 					listContracts.poDetail = append(listContracts.poDetail, listPO)
 
 					}
@@ -921,7 +1181,6 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 			
 		}
 
-				
 
 		return json.Marshal(listContracts.poDetail) 
 
@@ -938,7 +1197,9 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 	col1 := shim.Column{Value: &shim.Column_String_{String_: "PO"}}
 	columns = append(columns, col1)
 
+	
 	contractCounter := 0
+
 
 	rows, err := stub.GetRows("PurchaseOrder", columns)
 	if err != nil {
@@ -995,3 +1256,480 @@ func (t *PO) ReSubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byt
 	}
 
 
+	func (t *PO) GetContractReceivedList(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+
+		if len(args) != 2 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 2.")
+		}
+
+
+
+		companyID := args[0]
+		roleID := args[1]
+	
+		var listContracts ListContracts
+
+		listContracts.poDetail = make([]ListPO, 0)
+		
+
+		if roleID == "1" || roleID == "4" {
+
+			
+			var columns []shim.Column
+			col1 := shim.Column{Value: &shim.Column_String_{String_: "PO"}}
+			columns = append(columns, col1)
+			
+
+			rows,err := stub.GetRows("PurchaseOrder", columns)
+			
+			if err != nil {
+			return nil, fmt.Errorf("Error: Failed retrieving document Error %s", err.Error())
+			}
+
+			
+			
+			var contractIDOfUser ContractsList
+
+			
+
+				for row := range rows {
+					
+					contractIDOfUser.ContractNo = ""
+				
+					if len(row.Columns) == 0 { 
+
+						break 
+					
+					} else if roleID == "1" {
+						if row.Columns[24].GetString_() == companyID && row.Columns[19].GetString_() == "Cargo Received"{
+
+					 		contractIDOfUser.ContractNo = row.Columns[1].GetString_()
+					 
+						}
+
+					} else if roleID == "4"{
+
+						if row.Columns[25].GetString_() == companyID && row.Columns[19].GetString_() == "Cargo Received"{
+					 	contractIDOfUser.ContractNo = row.Columns[1].GetString_()
+
+						}
+
+					}  
+
+
+					if contractIDOfUser.ContractNo != "" {
+
+					b,_ := t.GetPO(stub, []string{contractIDOfUser.ContractNo})
+					var listPO ListPO
+					err = json.Unmarshal(b, &listPO)
+					listPO.ContractNo = contractIDOfUser.ContractNo
+
+					
+					b,_ = t.cl.GetCargoLocation(stub, []string{contractIDOfUser.ContractNo})
+
+					if err != nil {
+        				return nil, err
+        			}
+					listPO.CargoLocation = string(b)
+
+
+					var OfferStatusJSON EPOJSON
+					b,_ = t.epo.GetEPO(stub, []string{contractIDOfUser.ContractNo})
+					if err != nil {
+        				return nil, err
+        			}
+
+        			err = json.Unmarshal(b, &OfferStatusJSON)
+
+        			if err != nil{
+						return nil, err
+        			}
+
+        			listPO.OfferStatus = OfferStatusJSON.OfferStatus
+
+					listContracts.poDetail = append(listContracts.poDetail, listPO)
+
+					}
+
+				}
+
+				
+
+		} else if roleID == "2" || roleID == "3" || roleID == "6" {
+
+			
+
+			var columns []shim.Column
+			col1 := shim.Column{Value: &shim.Column_String_{String_: "RR"}}
+			columns = append(columns, col1)
+			
+
+			rows,err := stub.GetRows("RequestReservation", columns)
+			
+			if err != nil {
+			return nil, fmt.Errorf("Error: Failed retrieving document Error %s", err.Error())
+			
+			}
+
+
+			var contractIDOfUser ContractsList
+			
+				for row := range rows {
+	
+					contractIDOfUser.ContractNo = ""
+					if len(row.Columns) == 0 {
+
+						break 
+					
+					} else if roleID == "2" {
+						if row.Columns[7].GetString_() == companyID{
+
+						CToSend := make ([]string, 1)
+						CToSend[0] = row.Columns[1].GetString_()
+
+						
+						//get PO Table Contract status and if status is Cargo Received show that Contract to Exp Cnt For
+						b, err := t.GetContractStatus(stub, CToSend)
+
+						if err != nil {
+							return nil, err
+						}
+
+							if string(b) == "Cargo Received"{
+
+					 		contractIDOfUser.ContractNo = row.Columns[1].GetString_()
+
+					 		}
+						}
+					} else if roleID == "3" {
+
+
+						if row.Columns[8].GetString_() == companyID{
+
+						CToSend := make ([]string, 1)
+						CToSend[0] = row.Columns[1].GetString_()
+
+						
+						//get PO Table Contract status and if status is Cargo Received show that Contract to Exp cty Shi
+						b, err := t.GetContractStatus(stub, CToSend)
+
+						if err != nil {
+							return nil, err
+						}
+
+							if string(b) == "Cargo Received"{
+
+					 			contractIDOfUser.ContractNo = row.Columns[1].GetString_()
+					 		}
+					 	
+						}
+
+					} else if roleID == "6"{
+
+
+
+						if row.Columns[4].GetString_() == companyID{
+
+						CToSend := make ([]string, 1)
+						CToSend[0] = row.Columns[1].GetString_()
+
+						
+						//get PO Table Contract status and if status is Cargo Received show that Contract to Imp.Fwd
+						b, err := t.GetContractStatus(stub, CToSend)
+
+						if err != nil {
+							return nil, err
+						}
+
+						if string(b) == "Cargo Received" {
+
+					 	contractIDOfUser.ContractNo = row.Columns[1].GetString_()
+
+					 	}
+
+					 	
+						}
+
+					} 
+
+					if contractIDOfUser.ContractNo != "" {
+
+					//var poJSON POJSON
+					b,_ := t.GetPO(stub, []string{contractIDOfUser.ContractNo})
+					var listPO ListPO
+					err = json.Unmarshal(b, & listPO)
+					listPO.ContractNo = contractIDOfUser.ContractNo
+
+
+					b,_ = t.cl.GetCargoLocation(stub, []string{contractIDOfUser.ContractNo})
+				
+					listPO.CargoLocation = string(b)
+
+					var OfferStatusJSON EPOJSON
+					b,_ = t.epo.GetEPO(stub, []string{contractIDOfUser.ContractNo})
+					if err != nil {
+        				return nil, err
+        			}
+
+        			err = json.Unmarshal(b, &OfferStatusJSON)
+
+        			if err != nil{
+						return nil, err
+        			}
+
+        			listPO.OfferStatus = OfferStatusJSON.OfferStatus
+					listContracts.poDetail = append(listContracts.poDetail, listPO)
+
+				}
+
+				}
+
+		} else if roleID == "5" {
+
+			var columns []shim.Column
+			col1 := shim.Column{Value: &shim.Column_String_{String_: "CRR"}}
+			columns = append(columns, col1)
+			
+
+			rows,err := stub.GetRows("CargoReceiveRequest", columns)
+			
+			if err != nil {
+			return nil, fmt.Errorf("Error: Failed retrieving document Error %s", err.Error())
+			}
+
+			var contractIDOfUser ContractsList
+			
+
+				for row := range rows {
+
+					contractIDOfUser.ContractNo = ""
+
+					if len(row.Columns) == 0 {
+					
+						
+						break 
+					
+					} else if roleID == "5" {
+						if row.Columns[5].GetString_() == companyID{
+
+						CToSend := make ([]string, 1)
+						CToSend[0] = row.Columns[1].GetString_()
+
+						
+						//get PO Table Contract status and if status is Cargo Received show that Contract to Imp Cty Frw
+						b, err := t.GetContractStatus(stub, CToSend)
+
+						if err != nil {
+							return nil, err
+						}
+
+							if string(b) == "Cargo Received"{
+
+					 		contractIDOfUser.ContractNo = row.Columns[1].GetString_()
+
+					 	}
+					 		
+						}
+					}  
+
+					if contractIDOfUser.ContractNo != "" {
+					b,_ := t.GetPO(stub, []string{contractIDOfUser.ContractNo})
+					var listPO ListPO
+					err = json.Unmarshal(b, &listPO)
+					listPO.ContractNo = contractIDOfUser.ContractNo
+
+
+
+					b,_ = t.cl.GetCargoLocation(stub, []string{contractIDOfUser.ContractNo})
+
+					listPO.CargoLocation = string(b)
+
+					var OfferStatusJSON EPOJSON
+					b,_ = t.epo.GetEPO(stub, []string{contractIDOfUser.ContractNo})
+					if err != nil {
+        				return nil, err
+        			}
+
+        			err = json.Unmarshal(b, &OfferStatusJSON)
+
+        			if err != nil{
+						return nil, err
+        			}
+
+        			listPO.OfferStatus = OfferStatusJSON.OfferStatus
+
+					listContracts.poDetail = append(listContracts.poDetail, listPO)
+
+					}
+
+				}
+			
+		}
+
+
+		return json.Marshal(listContracts.poDetail) 
+
+	}
+
+
+func (t *PO) GetCargoLocationChangeList(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+
+		if len(args) != 0 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 0.")
+		}
+
+	var columns []shim.Column
+	col1 := shim.Column{Value: &shim.Column_String_{String_: "PO"}}
+	columns = append(columns, col1)
+
+	rows, err := stub.GetRows("PurchaseOrder", columns)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to retrieve row")
+	}
+
+	var listContracts ListContracts
+	listContracts.poDetail = make([]ListPO, 0)
+	
+				for row := range rows {
+
+					if len(row.Columns) == 0 { 
+
+						break 
+					
+					} else {
+
+						CToSend := make ([]string, 1)
+						CToSend[0] = row.Columns[1].GetString_()
+
+						b,_ := t.GetPO(stub,CToSend)
+
+						if err != nil {
+
+							return nil, err
+						}
+						var listPO ListPO
+						err = json.Unmarshal(b, &listPO)
+						if err != nil {
+							return nil, err
+						}	
+
+						b,_ = t.cl.GetCargoLocation(stub,CToSend)
+
+						if err != nil {
+        				return nil, err
+        				}
+						
+						listPO.CargoLocation = string(b)
+						listContracts.poDetail = append(listContracts.poDetail, listPO)
+
+						}
+					
+					}
+
+		return json.Marshal(listContracts.poDetail) 
+}
+
+
+func (t *PO) UpdatePOAmount(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+
+		
+		if len(args) != 2 {
+			return nil, fmt.Errorf("Incorrect number of arguments. Expecting 2. Got: %d.", len(args))
+		}
+
+		ContractNo := args[0]
+		amount := args[1]
+
+
+// Get the row pertaining to this UID
+		var columns []shim.Column
+		col1 := shim.Column{Value: &shim.Column_String_{String_: "PO"}}
+		columns = append(columns, col1)
+		col2 := shim.Column{Value: &shim.Column_String_{String_: ContractNo}}
+		columns = append(columns, col2)
+
+		row, err := stub.GetRow("PurchaseOrder", columns)
+		if err != nil {
+		return nil, fmt.Errorf("Error: Failed retrieving document with ContractNo %s. Error %s", ContractNo, err.Error())
+		}
+
+		// GetRows returns empty message if key does not exist
+		if len(row.Columns) == 0 {
+		return nil, err
+		}
+
+		
+		
+		
+		RefNo := row.Columns[2].GetString_()
+		ExporterName := row.Columns[3].GetString_()
+		ImporterName := row.Columns[4].GetString_()
+		Commodity := row.Columns[5].GetString_()
+		UnitPrice := row.Columns[6].GetString_()
+		Amount := amount
+		Currency := row.Columns[8].GetString_()
+		Quantity:= row.Columns[9].GetString_()
+		Weight := row.Columns[10].GetString_()
+		TermsOfTrade := row.Columns[11].GetString_()
+		TermsOfInsurance := row.Columns[12].GetString_()
+		TermsOfPayment := row.Columns[13].GetString_()
+		PackingMethod:= row.Columns[14].GetString_()
+		WayOfTransportation := row.Columns[15].GetString_()
+		TimeOfShipment := row.Columns[16].GetString_()
+		PortOfShipment := row.Columns[17].GetString_()
+		PortOfDischarge := row.Columns[18].GetString_()
+		ProcessStatus := row.Columns[19].GetString_()
+		POInitialCreateTime := row.Columns[20].GetString_()
+		UpdateTime := row.Columns[21].GetString_()
+		POCreatedTime := row.Columns[22].GetString_()
+		POSubmittedTime := row.Columns[23].GetString_()
+		CompanyIdOfExporter := row.Columns[24].GetString_()
+		CompanyIdOfImporter := row.Columns[25].GetString_()
+		PORejectReason := row.Columns[26].GetString_()
+		PaymentDate := row.Columns[27].GetString_()
+
+
+
+
+		ok, err := stub.ReplaceRow("PurchaseOrder", shim.Row{
+		Columns: []*shim.Column{
+			&shim.Column{Value: &shim.Column_String_{String_: "PO"}},
+			&shim.Column{Value: &shim.Column_String_{String_: ContractNo}},
+			&shim.Column{Value: &shim.Column_String_{String_: RefNo}},
+			&shim.Column{Value: &shim.Column_String_{String_: ExporterName}},
+			&shim.Column{Value: &shim.Column_String_{String_: ImporterName}},
+			&shim.Column{Value: &shim.Column_String_{String_: Commodity}},
+			&shim.Column{Value: &shim.Column_String_{String_: UnitPrice}},
+			&shim.Column{Value: &shim.Column_String_{String_: Amount}},
+			&shim.Column{Value: &shim.Column_String_{String_: Currency}},
+			&shim.Column{Value: &shim.Column_String_{String_: Quantity}},
+			&shim.Column{Value: &shim.Column_String_{String_: Weight}},
+			&shim.Column{Value: &shim.Column_String_{String_: TermsOfTrade}},
+			&shim.Column{Value: &shim.Column_String_{String_: TermsOfInsurance}},
+			&shim.Column{Value: &shim.Column_String_{String_: TermsOfPayment}},
+			&shim.Column{Value: &shim.Column_String_{String_: PackingMethod}},
+			&shim.Column{Value: &shim.Column_String_{String_: WayOfTransportation}},
+			&shim.Column{Value: &shim.Column_String_{String_: TimeOfShipment}},
+			&shim.Column{Value: &shim.Column_String_{String_: PortOfShipment}},
+			&shim.Column{Value: &shim.Column_String_{String_: PortOfDischarge}},
+			&shim.Column{Value: &shim.Column_String_{String_: ProcessStatus}},
+			&shim.Column{Value: &shim.Column_String_{String_: POInitialCreateTime}},
+			&shim.Column{Value: &shim.Column_String_{String_: UpdateTime}},
+			&shim.Column{Value: &shim.Column_String_{String_: POCreatedTime}},
+			&shim.Column{Value: &shim.Column_String_{String_: POSubmittedTime}},
+			&shim.Column{Value: &shim.Column_String_{String_: CompanyIdOfExporter}},
+			&shim.Column{Value: &shim.Column_String_{String_: CompanyIdOfImporter}},
+			&shim.Column{Value: &shim.Column_String_{String_: PORejectReason}},
+			&shim.Column{Value: &shim.Column_String_{String_: PaymentDate}},
+			
+			
+		}})
+
+	if !ok && err == nil {
+
+		return nil, errors.New("Document unable to Update.")
+	}
+
+	
+	return nil, err
+	}

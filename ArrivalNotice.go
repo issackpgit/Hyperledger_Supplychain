@@ -67,7 +67,7 @@ func (t *AN) SubmitDoc(stub shim.ChaincodeStubInterface, args []string) ([]byte,
 		// Insert a row
 	ok, err := stub.InsertRow("ArrivalNote", shim.Row{
 		Columns: []*shim.Column{
-			&shim.Column{Value: &shim.Column_String_{String_: "BL"}},
+			&shim.Column{Value: &shim.Column_String_{String_: "AN"}},
 			&shim.Column{Value: &shim.Column_String_{String_: ContractNo}},
 			&shim.Column{Value: &shim.Column_String_{String_: EstimatedVesselArrivalDate}},
 			&shim.Column{Value: &shim.Column_String_{String_: UpdateTime}},

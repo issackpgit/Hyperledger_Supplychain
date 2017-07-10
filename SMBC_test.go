@@ -356,17 +356,52 @@ func TestCC(t *testing.T) {
 		NumContracts int `json:"NumContracts"`
 		}
 
+		type ContractNo struct {
+
+			ContractNo  string `json:"ContractNo"`
+		}
+
+		type EPOJSON struct {
+
+
+	EarlyPaymentDate  string `json:"EarlyPaymentDate"`                                
+	DaysAccelerated   string `json:"DaysAccelerated"`                                    
+	DiscountRate       string `json:"DiscountRate"`                                      
+	DiscountAmount     string `json:"DiscountAmount"`                                  
+	TotalAmount       string `json:"TotalAmount"`         
+	OfferStatus    string `json:"OfferStatus"`
+	OfferedTime		string `json:"OfferedTime"`
+	UpdateTime		string `json:"UpdateTime"`
+
+	
+}
+
 		
         /* WORKFLOW 1: Start */
         // Happy path: submit po, accept po, po is positive
         // This must succeed
-        if err = submitPO(adminCert, "1000", "AA-123","XYZ","ABC","Air-Compressor","10000","20000","USD","20 set","5 t","T/T","EXW","ICC(A)",
-        	"On wooden skid","By sea","DDMMYYYY","PortA","PortB","DDMMYYYY","DDMMYYYY","DDMMYYYY","DDYYMMMM","XYZ","ABC", "DDMMYYYY"); err != nil {
+        //if
+         b, err := submitPO(adminCert, "1000", "AA-123","XYZ","ABC","Air-Compressor","10000","20000","USD","20 set","5 t","T/T","EXW","ICC(A)",
+        	"On wooden skid","By sea","DDMMYYYY","PortA","PortB","DDMMYYYY","DDMMYYYY","DDMMYYYY","DDYYMMMM","XYZ","ABC", "DDMMYYYY")
+        	if  err != nil {
                 t.Fatal(err)
         }
+        
+        var con ContractNo
+
+        err = json.Unmarshal(b,&con)
+        if err != nil{
+        	t.Fatal(err)
+        }
+        fmt.Println("Con0")
+        fmt.Println(con.ContractNo)
+
+        
+
+        ContractNumb1 := con.ContractNo
 
         // This must succeed
-        b, err := contractStatus("1000")
+        b, err = contractStatus(ContractNumb1)
 		
        if err != nil || string(b) != "P/O Submitted"{
 
@@ -374,7 +409,7 @@ func TestCC(t *testing.T) {
         } 
 
         // This must succeed
-        b, err = getPO("1000")
+        b, err = getPO(ContractNumb1)
         if err != nil || b == nil {
                 t.Fatal(err)
         }
@@ -384,9 +419,13 @@ func TestCC(t *testing.T) {
 		t.Fatal(err)
 		} else {
 
-		fmt.Printf("PODetails")
+		fmt.Printf("Pocheck")
         fmt.Println(poJSON)
 		}
+
+
+
+		
 
 /*
 		err = acceptPO(adminCert, "1000")
@@ -403,10 +442,29 @@ func TestCC(t *testing.T) {
 
         t.Fatal(err)
         } 
+	
 
 */
+        b, err = detailContractByContractID(ContractNumb1)
+       if err != nil {
+      
+			t.Fatal(err)
+		}
+
+		var dContract DetailContractJSON
+
+		err = json.Unmarshal(b, &dContract)
+		if err != nil{
+			
+			t.Fatal(err)	
+		} 
+
+		fmt.Println("find")
+        fmt.Println(dContract)
+
+
          // This must succeed
-        b, err = getCargoLocation("1000")
+        b, err = getCargoLocation(ContractNumb1)
 
         if err != nil {
         	t.Fatal(err)
@@ -417,7 +475,7 @@ func TestCC(t *testing.T) {
         } 
 
 
-        err = submitSN (adminCert, "1000", "DDMMYYYY","DDMMYYYY")
+        err = submitSN (adminCert, ContractNumb1, "DDMMYYYY","DDMMYYYY")
 
         if err != nil {
 
@@ -425,9 +483,10 @@ func TestCC(t *testing.T) {
 
         }
         
+
         var snJs SNJSON
 
-        b, err = getSN ("1000")
+        b, err = getSN (ContractNumb1)
 
         err = json.Unmarshal(b, &snJs)
 
@@ -442,7 +501,7 @@ func TestCC(t *testing.T) {
         }
 
 
-        err = acceptSN(adminCert, "1000", "DDMMYYYY","DDMMYYYY")
+        err = rejectSN(adminCert, ContractNumb1, "Rejection Comment","DDMMYYYY")
 
         if err != nil {
 
@@ -450,7 +509,7 @@ func TestCC(t *testing.T) {
 
         }
 
-		b, err = getPO("1000")
+		b, err = getPO(ContractNumb1)
         if err != nil || b == nil {
                 t.Fatal(err)
         }
@@ -461,39 +520,112 @@ func TestCC(t *testing.T) {
 		if err != nil {
 		t.Fatal(err)
 
-		} else if pJson.ProcessStatus != "S/N Confirmed"{
+
+		fmt.Println("POIS")
+		fmt.Println(pJson)
+
+
+		} else if pJson.ProcessStatus != "P/O Submitted"{
+
+			t.Fatal(err)
+		
+		} 
+
+		 err = submitSN (adminCert, ContractNumb1, "DDMMYYYY","DDMMYYYY")
+
+        if err != nil {
+
+        	t.Fatal(err)
+
+        }
+        
+        //var snJs SNJSON
+
+        b, err = getSN (ContractNumb1)
+
+        err = json.Unmarshal(b, &snJs)
+
+        if err != nil {
+
+        	t.Fatal(err)
+
+        } else {
+
+        	fmt.Println ("SNafterresubmission")
+        	fmt.Println (snJs)
+        }
+
+
+		b, err = getPO(ContractNumb1)
+        if err != nil || b == nil {
+                t.Fatal(err)
+        }
+       
+
+       // var pJson POJSON
+        err = json.Unmarshal(b, &pJson)
+		if err != nil {
+		t.Fatal(err)
+
+
+		} else if pJson.ProcessStatus != "S/N Submitted"{
 
 			t.Fatal(err)
 		
 		} 
 
 
-        /* WORKFLOW 1: End */
+		var epoJSON EPOJSON
+		b, err = getEPO(ContractNumb1)
 
-    	/* WORKFLOW 2: Start */
-
-		// Reject condition
-
-        if err = submitPO(adminCert, "1001", "AA-123","ABC0 Comp","XYZ1 Comp","Air-Compressor","10000","20000","USD","20 set","5 t","T/T","EXW","ICC(A)",
-        	"On wooden skid","By sea","DDMMYYYY","PortA","PortB","DDMMYYYY","DDMMYYYY","DDMMYYYY","DDYYMMMM","XYZ0","ABC1", "DDMMYYYY"); err != nil {
-                t.Fatal(err)
-        }
-
-        // This must succeed
-        b, err = contractStatus("1001")
-		
-       if err != nil || string(b) != "P/O Submitted"{
-        t.Fatal(err)
-
-        } 
-
-       	err = rejectPO(adminCert, "1001", "Rejection comment")
-		if err != nil  {
+		if err != nil {
 			t.Fatal(err)
-		}
+			} else {
+				err = json.Unmarshal(b,&epoJSON)
 
-		// This must succeed
-        b, err = getPO("1001")
+			}
+
+			fmt.Println("EPOis")
+			fmt.Println(epoJSON)
+
+
+			err = submitEarlyPaymentOffer(adminCert,ContractNumb1,"DDMMYYYY","DDMMYYYY","10per", "1000","30030","DDMMYYYY")
+			if err != nil {
+			t.Fatal(err)
+			} 
+
+
+			b, err = getEPO(ContractNumb1)
+
+			if err != nil {
+			t.Fatal(err)
+			} else {
+				err = json.Unmarshal(b,&epoJSON)
+
+			}
+
+			fmt.Println("EPOafterSubmitearly")
+			fmt.Println(epoJSON)
+
+
+			err = AcceptEarlyPaymentOffer(adminCert,ContractNumb1,"OfferAcceptedTime")
+			if err != nil {
+			t.Fatal(err)
+			} 
+
+			b, err = getEPO(ContractNumb1)
+
+			if err != nil {
+			t.Fatal(err)
+			} else {
+				err = json.Unmarshal(b,&epoJSON)
+
+			}
+
+			fmt.Println("EPOafteraccept")
+			fmt.Println(epoJSON)
+
+			b, err = getPO(ContractNumb1)
         if err != nil || b == nil {
                 t.Fatal(err)
         }
@@ -503,23 +635,115 @@ func TestCC(t *testing.T) {
 		t.Fatal(err)
 		} else {
 
-		fmt.Printf("PODetails ")
+		fmt.Printf("POafterEPOchange")
+        fmt.Println(poJSON)
+		}
+
+        /* WORKFLOW 1: End */
+
+    	/* WORKFLOW 2: Start */
+
+		// Reject condition
+
+        //if 
+        b, err = submitPO(adminCert, "1001", "AA-123","ABC0 Comp","XYZ1 Comp","Air-Compressor","10000","20000","USD","20 set","5 t","T/T","EXW","ICC(A)",
+        	"On wooden skid","By sea","DDMMYYYY","PortA","PortB","DDMMYYYY","DDMMYYYY","DDMMYYYY","DDYYMMMM","XYZ0","ABC1", "DDMMYYYY")
+        	 if err != nil {
+                t.Fatal(err)
+        } 
+
+        //var con ContractNo
+        err = json.Unmarshal(b,&con)
+        if err != nil{
+        	t.Fatal(err)
+        }
+
+        ContractNumb2 := con.ContractNo
+        fmt.Println("Con1")
+        fmt.Println(con.ContractNo)
+        // This must succeed
+        b, err = contractStatus(ContractNumb2)
+		
+       if err != nil || string(b) != "P/O Submitted"{
+        t.Fatal(err)
+
+        } 
+
+       	err = rejectPO(adminCert, ContractNumb2, "Rejection comment")
+		if err != nil  {
+			t.Fatal(err)
+		}
+
+		// This must succeed
+        b, err = getPO(ContractNumb2)
+        if err != nil || b == nil {
+                t.Fatal(err)
+        }
+       // var poJSON POJSON
+        err = json.Unmarshal(b, &poJSON)
+		if err != nil {
+		t.Fatal(err)
+		} else {
+
+		fmt.Printf("PODetails")
         fmt.Println(poJSON)
 		}
 
 
-		// This must succeed
-        b, err = contractStatus("1001")
-        if err != nil || string(b) != "P/O Created"{
-        	t.Fatal(err)
-        }
-
-
-        listCont, err := listContractsByCompID("ABC", "4")
+		listCont, err := listContractsByCompID("XYZ0", "1")
         if err != nil  {
 			t.Fatal(err)
 		}
 		var listContracts ListContracts
+		err = json.Unmarshal(listCont, &listContracts.poDetail)
+		if err != nil {
+		t.Fatal(err)
+		} else {
+
+		fmt.Println("l3")
+        fmt.Println(listContracts)
+		}
+
+
+		err = reSubmitPO (adminCert, ContractNumb2, "AA-123","ABC0 Comp","XYZ1 Comp","Air-Compressor","10000","20000","USD","13 set","5 t","T/T","EXW","ICC(A)",
+        	"On wooden skid","By sea","DDMMYYYY","PortA","PortB","DDMMYYYY","DDMMYYYY","DDYYMMMM","XYZ0","ABC1", "DDMMYYYY") 
+		if err != nil{
+
+		
+		t.Fatal(err)	
+		} 
+
+		// This must succeed
+        b, err = getPO(ContractNumb2)
+        if err != nil || b == nil {
+                t.Fatal(err)
+        }
+       // var poJSON POJSON
+        err = json.Unmarshal(b, &poJSON)
+		if err != nil {
+		t.Fatal(err)
+		} else {
+
+		fmt.Printf("POResubmittedDetails ")
+        fmt.Println(poJSON)
+        fmt.Println(poJSON.ProcessStatus)
+		}
+
+
+
+
+		// This must succeed
+        b, err = contractStatus(ContractNumb2)
+        if err != nil || string(b) != "P/O Submitted"{
+        	t.Fatal(err)
+        }
+
+
+        listCont, err = listContractsByCompID("ABC", "4")
+        if err != nil  {
+			t.Fatal(err)
+		}
+		//var listContracts ListContracts
 		err = json.Unmarshal(listCont, &listContracts.poDetail)
 		if err != nil {
 		t.Fatal(err)
@@ -547,7 +771,7 @@ func TestCC(t *testing.T) {
 
 
          // This must succeed
-        b, err = getCargoLocation("1001")
+        b, err = getCargoLocation(ContractNumb2)
 
         if err != nil {
         	t.Fatal(err)
@@ -575,19 +799,19 @@ func TestCC(t *testing.T) {
 		}
 
         
-       b, err = detailContractByContractID("1000")
+       b, err = detailContractByContractID(ContractNumb1)
        if err != nil {
 			t.Fatal(err)
 		}
 
-		var dContract DetailContractJSON
+		//var dContract DetailContractJSON
 
 		err = json.Unmarshal(b, &dContract)
 		if err != nil{
 			t.Fatal(err)	
 		} 
 
-		fmt.Println("DetailContract ")
+		fmt.Println("DetailContract2")
         fmt.Println(dContract)
 
 
@@ -611,21 +835,21 @@ func submitPO(admCert crypto.CertificateHandler, ContractNo string,
 		 Amount string, Currency string, Quantity string, Weight string,TermsOfTrade string,
 		 TermsOfInsurance string, TermsOfPayment string, PackingMethod string, WayOfTransportation string, TimeOfShipment string, 
 		 PortOfShipment string, PortOfDischarge string, POInitialCreateTime string, UpdateTime string, POCreatedTime string, POSubmittedTime string, 
-		 CompanyIdOfExporter string, CompanyIdOfImporter string, PaymentDate string ) error {
+		 CompanyIdOfExporter string, CompanyIdOfImporter string, PaymentDate string ) ([]byte, error) {
         // Get a transaction handler to be used to submit the execute transaction
         // and bind the chaincode access control logic using the binding
 
         submittingCertHandler, err := administrator.GetTCertificateHandlerNext()
         if err != nil {
-                return err
+                return nil,err
         }
         txHandler, err := submittingCertHandler.GetTransactionHandler()
         if err != nil {
-                return err
+                return nil,err
         }
         binding, err := txHandler.GetBinding()
         if err != nil {
-                return err
+                return nil,err
         }
 
        
@@ -638,13 +862,13 @@ func submitPO(admCert crypto.CertificateHandler, ContractNo string,
 
         chaincodeInputRaw, err := proto.Marshal(chaincodeInput)
         if err != nil {
-                return err
+                return nil,err
         }
 
         // Access control. Administrator signs chaincodeInputRaw || binding to confirm his identity
         sigma, err := admCert.Sign(append(chaincodeInputRaw, binding...))
         if err != nil {
-                return err
+                return nil,err
         }
 
         // Prepare spec and submit
@@ -664,18 +888,18 @@ func submitPO(admCert crypto.CertificateHandler, ContractNo string,
         // Now create the Transactions message and send to Peer.
         transaction, err := txHandler.NewChaincodeExecute(chaincodeInvocationSpec, tid)
         if err != nil {
-                return fmt.Errorf("Error deploying chaincode: %s ", err)
+                return nil,fmt.Errorf("Error deploying chaincode: %s ", err)
         }
 
         ledger, err := ledger.GetLedger()
         ledger.BeginTxBatch("1")
-        _, _, err = chaincode.Execute(ctx, chaincode.GetChain(chaincode.DefaultChain), transaction)
+        result, _, err := chaincode.Execute(ctx, chaincode.GetChain(chaincode.DefaultChain), transaction)
         if err != nil {
-                return fmt.Errorf("Error deploying chaincode: %s", err)
+                return nil, fmt.Errorf("Error deploying chaincode: %s", err)
         }
         ledger.CommitTxBatch("1", []*pb.Transaction{transaction}, nil, nil)
 
-        return err
+        return result, err
 }
 
 
@@ -1115,7 +1339,7 @@ func submitSN(admCert crypto.CertificateHandler, ContractNo string,
 }
 
 
-func acceptSN(admCert crypto.CertificateHandler, ContractNo string, UpdateTime string , SNConfirmedTime string) error {
+func rejectSN(admCert crypto.CertificateHandler, ContractNo string, rejectionComment string , UpdateTime string) error {
         // Get a transaction handler to be used to submit the execute transaction
         // and bind the chaincode access control logic using the binding
 
@@ -1133,7 +1357,7 @@ func acceptSN(admCert crypto.CertificateHandler, ContractNo string, UpdateTime s
         }
 
       
-        chaincodeInput := &pb.ChaincodeInput{Args: [][]byte{[]byte("acceptSN"), []byte(ContractNo), []byte(UpdateTime), []byte(SNConfirmedTime)}}
+        chaincodeInput := &pb.ChaincodeInput{Args: [][]byte{[]byte("rejectSN"), []byte(ContractNo), []byte(rejectionComment), []byte(UpdateTime)}}
         chaincodeInputRaw, err := proto.Marshal(chaincodeInput)
         if err != nil {
                 return err
@@ -1209,4 +1433,240 @@ func getSN(ContractNo string) ([]byte, error) {
         ledger.CommitTxBatch("1", []*pb.Transaction{transaction}, nil, nil)
 
         return result, err
+}
+
+
+func reSubmitPO(admCert crypto.CertificateHandler, ContractNo string, 
+		RefNo string, ExporterName string, ImporterName string, Commodity string, UnitPrice string,
+		 Amount string, Currency string, Quantity string, Weight string,TermsOfTrade string,
+		 TermsOfInsurance string, TermsOfPayment string, PackingMethod string, WayOfTransportation string, TimeOfShipment string, 
+		 PortOfShipment string, PortOfDischarge string, UpdateTime string, POCreatedTime string, POSubmittedTime string, 
+		 CompanyIdOfExporter string, CompanyIdOfImporter string, PaymentDate string ) error {
+        // Get a transaction handler to be used to submit the execute transaction
+        // and bind the chaincode access control logic using the binding
+
+        submittingCertHandler, err := administrator.GetTCertificateHandlerNext()
+        if err != nil {
+                return err
+        }
+        txHandler, err := submittingCertHandler.GetTransactionHandler()
+        if err != nil {
+                return err
+        }
+        binding, err := txHandler.GetBinding()
+        if err != nil {
+                return err
+        }
+
+       
+        chaincodeInput := &pb.ChaincodeInput{Args: [][]byte{[]byte("reSubmitPO"), []byte(ContractNo),[]byte(RefNo),
+        []byte(ExporterName),[]byte(ImporterName),[]byte(Commodity),[]byte(UnitPrice),[]byte(Amount),
+        []byte(Currency),[]byte(Quantity),[]byte(Weight),[]byte(TermsOfTrade),[]byte(TermsOfInsurance),
+        []byte(TermsOfPayment),[]byte(PackingMethod),[]byte(WayOfTransportation),[]byte(TimeOfShipment),[]byte(PortOfShipment),
+        []byte(PortOfDischarge),[]byte(UpdateTime),[]byte(POCreatedTime),
+        []byte(POSubmittedTime),[]byte(CompanyIdOfExporter),[]byte(CompanyIdOfImporter),[]byte(PaymentDate)}}
+
+        chaincodeInputRaw, err := proto.Marshal(chaincodeInput)
+        if err != nil {
+                return err
+        }
+
+        // Access control. Administrator signs chaincodeInputRaw || binding to confirm his identity
+        sigma, err := admCert.Sign(append(chaincodeInputRaw, binding...))
+        if err != nil {
+                return err
+        }
+
+        // Prepare spec and submit
+        spec := &pb.ChaincodeSpec{
+                Type:                 1,
+                ChaincodeID:          &pb.ChaincodeID{Name: "mycc"},
+                CtorMsg:              chaincodeInput,
+                Metadata:             sigma, // Proof of identity
+                ConfidentialityLevel: pb.ConfidentialityLevel_PUBLIC,
+        }
+
+        var ctx = context.Background()
+        chaincodeInvocationSpec := &pb.ChaincodeInvocationSpec{ChaincodeSpec: spec}
+
+        tid := chaincodeInvocationSpec.ChaincodeSpec.ChaincodeID.Name
+
+        // Now create the Transactions message and send to Peer.
+        transaction, err := txHandler.NewChaincodeExecute(chaincodeInvocationSpec, tid)
+        if err != nil {
+                return fmt.Errorf("Error deploying chaincode: %s ", err)
+        }
+
+        ledger, err := ledger.GetLedger()
+        ledger.BeginTxBatch("1")
+        _, _, err = chaincode.Execute(ctx, chaincode.GetChain(chaincode.DefaultChain), transaction)
+        if err != nil {
+                return fmt.Errorf("Error deploying chaincode: %s", err)
+        }
+        ledger.CommitTxBatch("1", []*pb.Transaction{transaction}, nil, nil)
+
+        return err
+}
+
+
+func getEPO(ContractNo string) ([]byte, error) {
+        
+        chaincodeInput := &pb.ChaincodeInput{Args: [][]byte{[]byte("getEPO"), []byte(ContractNo)}}
+
+        // Prepare spec and submit
+        spec := &pb.ChaincodeSpec{
+                Type:                 1,
+                ChaincodeID:          &pb.ChaincodeID{Name: "mycc"},
+                CtorMsg:              chaincodeInput,
+                ConfidentialityLevel: pb.ConfidentialityLevel_PUBLIC,
+        }
+
+        var ctx = context.Background()
+        chaincodeInvocationSpec := &pb.ChaincodeInvocationSpec{ChaincodeSpec: spec}
+
+        tid := chaincodeInvocationSpec.ChaincodeSpec.ChaincodeID.Name
+
+        // Now create the Transactions message and send to Peer.
+        transaction, err := administrator.NewChaincodeQuery(chaincodeInvocationSpec, tid)
+        if err != nil {
+                return nil, fmt.Errorf("Error deploying chaincode: %s ", err)
+        }
+
+        ledger, err := ledger.GetLedger()
+        ledger.BeginTxBatch("1")
+        result, _, err := chaincode.Execute(ctx, chaincode.GetChain(chaincode.DefaultChain), transaction)
+        if err != nil {
+                return nil, fmt.Errorf("Error deploying chaincode: %s", err)
+        }
+        ledger.CommitTxBatch("1", []*pb.Transaction{transaction}, nil, nil)
+
+        return result, err
+}
+
+
+func submitEarlyPaymentOffer(admCert crypto.CertificateHandler, ContractNo string , date1 string, date2 string,offerper string,disamount string, amount string, date3 string  ) error {
+        // Get a transaction handler to be used to submit the execute transaction
+        // and bind the chaincode access control logic using the binding
+
+        submittingCertHandler, err := administrator.GetTCertificateHandlerNext()
+
+
+        if err != nil {
+                return err
+        }
+        txHandler, err := submittingCertHandler.GetTransactionHandler()
+        if err != nil {
+                return err
+        }
+        binding, err := txHandler.GetBinding()
+        if err != nil {
+                return err
+        }
+
+        
+        chaincodeInput := &pb.ChaincodeInput{Args: [][]byte{[]byte("submitEarlyPaymentOffer"), []byte(ContractNo),[]byte(date1),[]byte(date2),[]byte(offerper),[]byte(disamount),[]byte(amount), []byte(date3)}}
+        chaincodeInputRaw, err := proto.Marshal(chaincodeInput)
+        if err != nil {
+                return err
+        }
+
+        // Access control. Administrator signs chaincodeInputRaw || binding to confirm his identity
+        sigma, err := admCert.Sign(append(chaincodeInputRaw, binding...))
+        if err != nil {
+                return err
+        }
+
+        // Prepare spec and submit
+        spec := &pb.ChaincodeSpec{
+                Type:                 1,
+                ChaincodeID:          &pb.ChaincodeID{Name: "mycc"},
+                CtorMsg:              chaincodeInput,
+                Metadata:             sigma, // Proof of identity
+                ConfidentialityLevel: pb.ConfidentialityLevel_PUBLIC,
+        }
+
+        var ctx = context.Background()
+        chaincodeInvocationSpec := &pb.ChaincodeInvocationSpec{ChaincodeSpec: spec}
+
+        tid := chaincodeInvocationSpec.ChaincodeSpec.ChaincodeID.Name
+
+        // Now create the Transactions message and send to Peer.
+        transaction, err := txHandler.NewChaincodeExecute(chaincodeInvocationSpec, tid)
+        if err != nil {
+                return fmt.Errorf("Error deploying chaincode: %s ", err)
+        }
+
+        ledger, err := ledger.GetLedger()
+        ledger.BeginTxBatch("1")
+        _, _, err = chaincode.Execute(ctx, chaincode.GetChain(chaincode.DefaultChain), transaction)
+        if err != nil {
+                return fmt.Errorf("Error deploying chaincode: %s", err)
+        }
+        ledger.CommitTxBatch("1", []*pb.Transaction{transaction}, nil, nil)
+
+        return err
+}  
+
+
+
+
+func AcceptEarlyPaymentOffer(admCert crypto.CertificateHandler, ContractNo string, date1 string) error {
+        // Get a transaction handler to be used to submit the execute transaction
+        // and bind the chaincode access control logic using the binding
+
+        submittingCertHandler, err := administrator.GetTCertificateHandlerNext()
+        if err != nil {
+                return err
+        }
+        txHandler, err := submittingCertHandler.GetTransactionHandler()
+        if err != nil {
+                return err
+        }
+        binding, err := txHandler.GetBinding()
+        if err != nil {
+                return err
+        }
+
+      
+        chaincodeInput := &pb.ChaincodeInput{Args: [][]byte{[]byte("acceptEarlyPaymentOffer"), []byte(ContractNo),[]byte(date1)}}
+        chaincodeInputRaw, err := proto.Marshal(chaincodeInput)
+        if err != nil {
+                return err
+        }
+
+        // Access control. Administrator signs chaincodeInputRaw || binding to confirm his identity
+        sigma, err := admCert.Sign(append(chaincodeInputRaw, binding...))
+        if err != nil {
+                return err
+        }
+
+        // Prepare spec and submit
+        spec := &pb.ChaincodeSpec{
+                Type:                 1,
+                ChaincodeID:          &pb.ChaincodeID{Name: "mycc"},
+                CtorMsg:              chaincodeInput,
+                Metadata:             sigma, // Proof of identity
+                ConfidentialityLevel: pb.ConfidentialityLevel_PUBLIC,
+        }
+
+        var ctx = context.Background()
+        chaincodeInvocationSpec := &pb.ChaincodeInvocationSpec{ChaincodeSpec: spec}
+
+        tid := chaincodeInvocationSpec.ChaincodeSpec.ChaincodeID.Name
+
+        // Now create the Transactions message and send to Peer.
+        transaction, err := txHandler.NewChaincodeExecute(chaincodeInvocationSpec, tid)
+        if err != nil {
+                return fmt.Errorf("Error deploying chaincode: %s ", err)
+        }
+
+        ledger, err := ledger.GetLedger()
+        ledger.BeginTxBatch("1")
+        _, _, err = chaincode.Execute(ctx, chaincode.GetChain(chaincode.DefaultChain), transaction)
+        if err != nil {
+                return fmt.Errorf("Error deploying chaincode: %s", err)
+        }
+        ledger.CommitTxBatch("1", []*pb.Transaction{transaction}, nil, nil)
+
+        return err
 }
