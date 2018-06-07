@@ -275,6 +275,7 @@ func (t *SMBC) Query(stub shim.ChaincodeStubInterface, function string, args []s
 
     }else if function == "getAN"{
 
+		
     	return t.an.GetAN(stub,args)
 
     }else if function == "getCRR"{
